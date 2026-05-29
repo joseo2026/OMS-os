@@ -15,7 +15,7 @@ export const C = {
 };
 
 export const S = {
-  app: { background: C.bg, minHeight: "100vh", fontFamily: "'DM Mono', 'Courier New', monospace", color: C.textPrimary },
+  app: { background: C.bg, minHeight: "100vh", fontFamily: "'Roboto', 'Arial', sans-serif", color: C.textPrimary },
   header: { background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" },
   nav: { display: "flex", background: C.surface, borderBottom: `1px solid ${C.border}`, overflowX: "auto" },
   navBtn: (active) => ({ padding: "12px 16px", background: "none", border: "none", borderBottom: active ? `2px solid ${C.accent}` : "2px solid transparent", color: active ? C.accent : C.textSecondary, cursor: "pointer", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "inherit", whiteSpace: "nowrap", transition: "all 0.15s" }),
