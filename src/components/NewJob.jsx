@@ -3,6 +3,7 @@ import { C, S } from "../styles.js";
 import { uid, today, jobNum, fmt, saveData } from "../helpers.js";
 import { SERVICES, FL_TAX } from "../constants.js";
 import Input from "./Input.jsx";
+import ShareButtons from "./ShareButtons.jsx";
 
 function Receipt({ job, onDone }) {
   return (
@@ -80,7 +81,8 @@ function Receipt({ job, onDone }) {
           <div style={{ fontSize: 12, color: "#e8633a", marginTop: 6, fontWeight: 700 }}>Thank You For Your Business!</div>
         </div>
       </div>
-      <div style={{ display: "flex", gap: 10, marginTop: 12 }} className="no-print">
+      <ShareButtons job={job} />
+      <div style={{ display: "flex", gap: 10, marginTop: 10 }} className="no-print">
         <button style={{ ...S.btnSecondary, flex: 1 }} onClick={onDone}>← Dashboard</button>
         <button style={{ ...S.btnPrimary, flex: 1 }} onClick={() => window.print()}>Print / Save PDF</button>
       </div>

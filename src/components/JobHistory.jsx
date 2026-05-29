@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { C, S } from "../styles.js";
 import { fmt } from "../helpers.js";
+import ShareButtons from "./ShareButtons.jsx";
 
 function JobReceipt({ j, onBack }) {
   return (
@@ -77,7 +78,8 @@ function JobReceipt({ j, onBack }) {
           <div style={{ fontSize: 12, color: "#e8633a", marginTop: 6, fontWeight: 700 }}>Thank You For Your Business!</div>
         </div>
       </div>
-      <button style={{ ...S.btnPrimary, width: "100%", marginTop: 12 }} className="no-print" onClick={() => window.print()}>
+      <ShareButtons job={j} />
+      <button style={{ ...S.btnPrimary, width: "100%", marginTop: 10 }} className="no-print" onClick={() => window.print()}>
         Print / Save PDF
       </button>
     </div>
