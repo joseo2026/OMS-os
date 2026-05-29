@@ -6,10 +6,12 @@ import Modal from "./Modal.jsx";
 
 const EMPTY_CUSTOMER = { name: "", phone: "", email: "", address: "", city: "", zip: "" };
 const EMPTY_VEHICLE = { year: "", make: "", model: "", vin: "", color: "", notes: "" };
+const EMPTY_NEW_VEHICLE = { year: "", make: "", model: "", vin: "", color: "", notes: "" };
 
 export default function Customers({ data, setData }) {
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [customerForm, setCustomerForm] = useState(EMPTY_CUSTOMER);
+  const [newVehicleForm, setNewVehicleForm] = useState(EMPTY_NEW_VEHICLE);
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState(null);
   const [vehicleModal, setVehicleModal] = useState(null); // customerId
@@ -28,10 +30,17 @@ export default function Customers({ data, setData }) {
 
   function saveCustomer() {
     if (!customerForm.name.trim()) return;
-    const updated = { ...data, customers: [...(data.customers || []), { ...customerForm, id: uid(), createdAt: today() }] };
+    const customerId = uid();
+    const newCustomer = { ...customerForm, id: customerId, createdAt: today() };
+    const hasVehicle = newVehicleForm.year.trim() && newVehicleForm.make.trim() && newVehicleForm.model.trim();
+    const newVehicles = hasVehicle
+      ? [...(data.vehicles || []), { ...newVehicleForm, customerId, id: uid(), createdAt: today() }]
+      : data.vehicles || [];
+    const updated = { ...data, customers: [...(data.customers || []), newCustomer], vehicles: newVehicles };
     setData(updated);
     saveData(updated);
     setCustomerForm(EMPTY_CUSTOMER);
+    setNewVehicleForm(EMPTY_NEW_VEHICLE);
     setShowCustomerModal(false);
   }
 
@@ -186,7 +195,7 @@ export default function Customers({ data, setData }) {
 
       {/* Add Customer modal */}
       {showCustomerModal && (
-        <Modal title="New Customer" onClose={() => setShowCustomerModal(false)}>
+        <Modal title="New Customer" onClose={() => { setShowCustomerModal(false); setNewVehicleForm(EMPTY_NEW_VEHICLE); }}>
           <Input label="Full Name *" value={customerForm.name} onChange={e => setCustomerForm({ ...customerForm, name: e.target.value })} placeholder="Customer name" />
           <Input label="Phone" value={customerForm.phone} onChange={e => setCustomerForm({ ...customerForm, phone: e.target.value })} placeholder="(555) 555-5555" />
           <Input label="Email" type="email" value={customerForm.email} onChange={e => setCustomerForm({ ...customerForm, email: e.target.value })} placeholder="email@example.com" />
@@ -195,8 +204,23 @@ export default function Customers({ data, setData }) {
             <Input label="City" value={customerForm.city} onChange={e => setCustomerForm({ ...customerForm, city: e.target.value })} placeholder="City" />
             <Input label="ZIP" value={customerForm.zip} onChange={e => setCustomerForm({ ...customerForm, zip: e.target.value })} placeholder="ZIP" />
           </div>
-          <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-            <button style={{ ...S.btnSecondary, flex: 1 }} onClick={() => setShowCustomerModal(false)}>Cancel</button>
+
+          <div style={{ borderTop: `1px solid ${C.border}`, margin: "16px 0 12px" }} />
+          <div style={{ fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, marginBottom: 10 }}>
+            Vehicle <span style={{ fontWeight: 400, color: C.textMuted }}>(optional)</span>
+          </div>
+          <div style={S.grid3}>
+            <Input label="Year" value={newVehicleForm.year} onChange={e => setNewVehicleForm({ ...newVehicleForm, year: e.target.value })} placeholder="2020" />
+            <Input label="Make" value={newVehicleForm.make} onChange={e => setNewVehicleForm({ ...newVehicleForm, make: e.target.value })} placeholder="Toyota" />
+            <Input label="Model" value={newVehicleForm.model} onChange={e => setNewVehicleForm({ ...newVehicleForm, model: e.target.value })} placeholder="Camry" />
+          </div>
+          <div style={S.grid2}>
+            <Input label="Color" value={newVehicleForm.color} onChange={e => setNewVehicleForm({ ...newVehicleForm, color: e.target.value })} placeholder="e.g. Silver" />
+            <Input label="VIN" value={newVehicleForm.vin} onChange={e => setNewVehicleForm({ ...newVehicleForm, vin: e.target.value })} placeholder="VIN" />
+          </div>
+
+          <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+            <button style={{ ...S.btnSecondary, flex: 1 }} onClick={() => { setShowCustomerModal(false); setNewVehicleForm(EMPTY_NEW_VEHICLE); }}>Cancel</button>
             <button style={{ ...S.btnPrimary, flex: 1 }} onClick={saveCustomer}>Save Customer</button>
           </div>
         </Modal>
