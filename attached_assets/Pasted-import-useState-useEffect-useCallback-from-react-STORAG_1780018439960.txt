@@ -1,0 +1,1157 @@
+import { useState, useEffect, useCallback } from "react";
+
+// ─── STORAGE ────────────────────────────────────────────────────────────────
+const STORAGE_KEY = "oms-data-v1";
+
+const defaultData = {
+  customers: [],
+  vehicles: [],
+  jobs: [],
+  expenses: [],
+  mileage: [],
+  appointments: [],
+};
+
+async function loadData() {
+  try {
+    const result = await window.storage.get(STORAGE_KEY);
+    return result ? JSON.parse(result.value) : defaultData;
+  } catch {
+    return defaultData;
+  }
+}
+
+async function saveData(data) {
+  try {
+    await window.storage.set(STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error("Save failed", e);
+  }
+}
+
+// ─── HELPERS ────────────────────────────────────────────────────────────────
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+function fmt(n) {
+  return "$" + Number(n || 0).toFixed(2);
+}
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+function jobNum() {
+  const n = new Date();
+  return `OMS-${n.getFullYear()}${String(n.getMonth()+1).padStart(2,"0")}${String(n.getDate()).padStart(2,"0")}-${String(n.getHours()).padStart(2,"0")}${String(n.getMinutes()).padStart(2,"0")}`;
+}
+
+const EXPENSE_CATS = [
+  "Parts & Materials","Tools & Equipment","Fuel","Marketing",
+  "Administrative","Insurance","Technology","Vehicle Maintenance",
+  "Legal & Accounting","Miscellaneous"
+];
+
+const SERVICES = [
+  { name: "Synthetic Oil Change (up to 5qt)", labor: 100, parts: 50 },
+  { name: "Conventional Oil Change (up to 5qt)", labor: 75, parts: 35 },
+  { name: "Tire Rotation", labor: 40, parts: 0 },
+  { name: "Wiper Blade Replacement", labor: 20, parts: 0 },
+  { name: "Light Bulb Replacement", labor: 20, parts: 0 },
+  { name: "Brake Inspection", labor: 30, parts: 0 },
+  { name: "Brake Pad Replacement (per axle)", labor: 80, parts: 0 },
+  { name: "Additional Oil Quart", labor: 0, parts: 9 },
+  { name: "Custom Service", labor: 0, parts: 0 },
+];
+
+const FL_TAX = 0.07;
+const SE_TAX_RATE = 0.153;
+const FED_TAX_RATE = 0.22;
+const QUARTERLY_DATES = ["Apr 15","Jun 15","Sep 15","Jan 15"];
+const MILEAGE_RATE = 0.67;
+
+// ─── STYLES ─────────────────────────────────────────────────────────────────
+const C = {
+  bg: "#0c0c0e",
+  surface: "#131316",
+  elevated: "#1a1a1f",
+  border: "#252530",
+  borderLight: "#2e2e3a",
+  accent: "#e8633a",
+  accentDim: "#c04f2a",
+  green: "#4ade80",
+  red: "#f87171",
+  yellow: "#fbbf24",
+  textPrimary: "#f0f0f5",
+  textSecondary: "#8888a0",
+  textMuted: "#55556a",
+};
+
+const S = {
+  app: { background: C.bg, minHeight: "100vh", fontFamily: "'DM Mono', 'Courier New', monospace", color: C.textPrimary },
+  header: { background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" },
+  nav: { display: "flex", background: C.surface, borderBottom: `1px solid ${C.border}`, overflowX: "auto" },
+  navBtn: (active) => ({ padding: "12px 16px", background: "none", border: "none", borderBottom: active ? `2px solid ${C.accent}` : "2px solid transparent", color: active ? C.accent : C.textSecondary, cursor: "pointer", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "inherit", whiteSpace: "nowrap", transition: "all 0.15s" }),
+  content: { padding: "20px", maxWidth: 900, margin: "0 auto" },
+  card: { background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: "16px 20px", marginBottom: 12 },
+  cardTitle: { fontSize: 11, color: C.accent, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 14, fontWeight: 500 },
+  input: { width: "100%", background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 6, padding: "9px 12px", color: C.textPrimary, fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box", transition: "border-color 0.15s" },
+  label: { display: "block", fontSize: 10, color: C.textMuted, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.1em" },
+  btnPrimary: { background: C.accent, border: "none", borderRadius: 6, padding: "10px 20px", color: "#fff", fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase" },
+  btnSecondary: { background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 6, padding: "10px 20px", color: C.textSecondary, fontSize: 12, fontWeight: 500, letterSpacing: "0.1em", cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase" },
+  btnDanger: { background: "none", border: `1px solid ${C.red}`, borderRadius: 6, padding: "6px 14px", color: C.red, fontSize: 11, cursor: "pointer", fontFamily: "inherit" },
+  grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 },
+  grid3: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 },
+  stat: { background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 8, padding: "14px 16px" },
+  statLabel: { fontSize: 10, color: C.textMuted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 4 },
+  statValue: { fontSize: 22, fontWeight: 600, color: C.textPrimary },
+  tag: (color) => ({ display: "inline-block", background: color + "22", color: color, border: `1px solid ${color}44`, borderRadius: 4, padding: "2px 8px", fontSize: 10, letterSpacing: "0.08em" }),
+  row: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${C.border}` },
+  sectionHead: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
+};
+
+// ─── INPUT COMPONENT ────────────────────────────────────────────────────────
+function Input({ label, ...props }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <div style={{ marginBottom: 12 }}>
+      {label && <label style={S.label}>{label}</label>}
+      {props.as === "select" ? (
+        <select {...props} style={{ ...S.input, borderColor: focused ? C.accent : C.border }}
+          onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}>
+          {props.children}
+        </select>
+      ) : props.as === "textarea" ? (
+        <textarea {...props} style={{ ...S.input, borderColor: focused ? C.accent : C.border, resize: "vertical", minHeight: 70 }}
+          onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} />
+      ) : (
+        <input {...props} style={{ ...S.input, borderColor: focused ? C.accent : C.border }}
+          onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} />
+      )}
+    </div>
+  );
+}
+
+// ─── MODAL ──────────────────────────────────────────────────────────────────
+function Modal({ title, onClose, children }) {
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#000a", zIndex: 100, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "40px 16px", overflowY: "auto" }}>
+      <div style={{ background: C.surface, border: `1px solid ${C.borderLight}`, borderRadius: 10, width: "100%", maxWidth: 560, padding: 24 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <div style={{ fontSize: 13, color: C.accent, letterSpacing: "0.12em", textTransform: "uppercase" }}>{title}</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: C.textSecondary, fontSize: 20, cursor: "pointer", lineHeight: 1 }}>×</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ─── DASHBOARD ──────────────────────────────────────────────────────────────
+function Dashboard({ data }) {
+  const jobs = data.jobs || [];
+  const expenses = data.expenses || [];
+  const mileage = data.mileage || [];
+
+  const thisMonth = new Date().toISOString().slice(0, 7);
+  const monthJobs = jobs.filter(j => j.date?.startsWith(thisMonth));
+  const monthIncome = monthJobs.reduce((s, j) => s + Number(j.grandTotal || 0), 0);
+  const totalIncome = jobs.reduce((s, j) => s + Number(j.grandTotal || 0), 0);
+  const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+  const netProfit = totalIncome - totalExpenses;
+  const seTax = Math.max(0, netProfit) * SE_TAX_RATE;
+  const fedTax = Math.max(0, netProfit) * FED_TAX_RATE;
+  const totalTaxEstimate = seTax + fedTax;
+  const quarterlyEstimate = totalTaxEstimate / 4;
+  const totalMiles = mileage.reduce((s, m) => s + Number(m.miles || 0), 0);
+  const mileageDeduction = totalMiles * MILEAGE_RATE;
+
+  const recentJobs = [...jobs].sort((a, b) => b.date?.localeCompare(a.date)).slice(0, 5);
+
+  return (
+    <div>
+      <div style={{ ...S.grid2, marginBottom: 12, gridTemplateColumns: "repeat(2, 1fr)" }}>
+        <div style={S.stat}>
+          <div style={S.statLabel}>This Month</div>
+          <div style={{ ...S.statValue, color: C.green }}>{fmt(monthIncome)}</div>
+          <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>{monthJobs.length} jobs</div>
+        </div>
+        <div style={S.stat}>
+          <div style={S.statLabel}>Net Profit (YTD)</div>
+          <div style={{ ...S.statValue, color: netProfit >= 0 ? C.green : C.red }}>{fmt(netProfit)}</div>
+          <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>after expenses</div>
+        </div>
+        <div style={S.stat}>
+          <div style={S.statLabel}>Total Expenses</div>
+          <div style={{ ...S.statValue, color: C.red }}>{fmt(totalExpenses)}</div>
+          <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>+ {fmt(mileageDeduction)} mileage deduction</div>
+        </div>
+        <div style={S.stat}>
+          <div style={S.statLabel}>Quarterly Tax Est.</div>
+          <div style={{ ...S.statValue, color: C.yellow }}>{fmt(quarterlyEstimate)}</div>
+          <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>{fmt(totalTaxEstimate)} annual est.</div>
+        </div>
+      </div>
+
+      <div style={S.card}>
+        <div style={S.cardTitle}>Tax Breakdown (YTD)</div>
+        <div style={S.row}>
+          <span style={{ fontSize: 12, color: C.textSecondary }}>Gross Revenue</span>
+          <span style={{ fontSize: 13, color: C.green }}>{fmt(totalIncome)}</span>
+        </div>
+        <div style={S.row}>
+          <span style={{ fontSize: 12, color: C.textSecondary }}>Business Expenses</span>
+          <span style={{ fontSize: 13, color: C.red }}>- {fmt(totalExpenses)}</span>
+        </div>
+        <div style={S.row}>
+          <span style={{ fontSize: 12, color: C.textSecondary }}>Mileage Deduction ({totalMiles} mi × $0.67)</span>
+          <span style={{ fontSize: 13, color: C.red }}>- {fmt(mileageDeduction)}</span>
+        </div>
+        <div style={{ ...S.row, borderBottom: "none" }}>
+          <span style={{ fontSize: 12, color: C.textSecondary }}>Net Taxable Income</span>
+          <span style={{ fontSize: 13, fontWeight: 600 }}>{fmt(Math.max(0, netProfit - mileageDeduction))}</span>
+        </div>
+        <div style={{ background: C.elevated, borderRadius: 6, padding: "12px 14px", marginTop: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: C.textMuted, marginBottom: 6 }}>
+            <span>Self-Employment Tax (15.3%)</span><span style={{ color: C.yellow }}>{fmt(seTax)}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: C.textMuted, marginBottom: 10 }}>
+            <span>Federal Income Tax Est. (22%)</span><span style={{ color: C.yellow }}>{fmt(fedTax)}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 600, borderTop: `1px solid ${C.border}`, paddingTop: 8 }}>
+            <span>Quarterly Payment Est.</span><span style={{ color: C.yellow }}>{fmt(quarterlyEstimate)}</span>
+          </div>
+          <div style={{ fontSize: 10, color: C.textMuted, marginTop: 8 }}>
+            Due: {QUARTERLY_DATES.map((d, i) => <span key={i} style={{ marginRight: 10 }}>Q{i + 1}: {d}</span>)}
+          </div>
+        </div>
+      </div>
+
+      <div style={S.card}>
+        <div style={S.cardTitle}>Recent Jobs</div>
+        {recentJobs.length === 0 ? (
+          <div style={{ fontSize: 12, color: C.textMuted, padding: "8px 0" }}>No jobs recorded yet</div>
+        ) : recentJobs.map(j => (
+          <div key={j.id} style={S.row}>
+            <div>
+              <div style={{ fontSize: 13 }}>{j.customerName}</div>
+              <div style={{ fontSize: 11, color: C.textMuted }}>{j.vehicleYear} {j.vehicleMake} {j.vehicleModel} · {j.date}</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 14, color: C.green, fontWeight: 600 }}>{fmt(j.grandTotal)}</div>
+              <div style={{ fontSize: 10, color: C.textMuted }}>{j.jobNumber}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── CUSTOMERS ──────────────────────────────────────────────────────────────
+function Customers({ data, setData }) {
+  const [showModal, setShowModal] = useState(false);
+  const [search, setSearch] = useState("");
+  const [form, setForm] = useState({ name: "", phone: "", email: "", address: "", city: "", zip: "" });
+
+  const filtered = (data.customers || []).filter(c =>
+    c.name?.toLowerCase().includes(search.toLowerCase()) ||
+    c.phone?.includes(search) ||
+    c.email?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  function save() {
+    if (!form.name.trim()) return;
+    const updated = { ...data, customers: [...(data.customers || []), { ...form, id: uid(), createdAt: today() }] };
+    setData(updated);
+    saveData(updated);
+    setForm({ name: "", phone: "", email: "", address: "", city: "", zip: "" });
+    setShowModal(false);
+  }
+
+  function remove(id) {
+    const updated = { ...data, customers: data.customers.filter(c => c.id !== id) };
+    setData(updated);
+    saveData(updated);
+  }
+
+  const vehicles = data.vehicles || [];
+
+  return (
+    <div>
+      <div style={S.sectionHead}>
+        <div style={{ fontSize: 12, color: C.textSecondary }}>{filtered.length} customers</div>
+        <button style={S.btnPrimary} onClick={() => setShowModal(true)}>+ Add Customer</button>
+      </div>
+      <input style={{ ...S.input, marginBottom: 14 }} placeholder="Search customers..." value={search} onChange={e => setSearch(e.target.value)} />
+      {filtered.map(c => {
+        const cvs = vehicles.filter(v => v.customerId === c.id);
+        return (
+          <div key={c.id} style={S.card}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>{c.name}</div>
+                <div style={{ fontSize: 12, color: C.textSecondary }}>{c.phone} {c.email && `· ${c.email}`}</div>
+                {c.address && <div style={{ fontSize: 12, color: C.textMuted }}>{c.address}, {c.city} {c.zip}</div>}
+                {cvs.length > 0 && (
+                  <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {cvs.map(v => <span key={v.id} style={S.tag(C.accent)}>{v.year} {v.make} {v.model}</span>)}
+                  </div>
+                )}
+              </div>
+              <button style={S.btnDanger} onClick={() => remove(c.id)}>Remove</button>
+            </div>
+          </div>
+        );
+      })}
+      {filtered.length === 0 && <div style={{ fontSize: 12, color: C.textMuted, padding: "20px 0" }}>No customers found</div>}
+
+      {showModal && (
+        <Modal title="New Customer" onClose={() => setShowModal(false)}>
+          <Input label="Full Name *" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Customer name" />
+          <Input label="Phone" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="(555) 555-5555" />
+          <Input label="Email" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="email@example.com" />
+          <Input label="Service Address" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} placeholder="Street address" />
+          <div style={S.grid2}>
+            <Input label="City" value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} placeholder="City" />
+            <Input label="ZIP" value={form.zip} onChange={e => setForm({ ...form, zip: e.target.value })} placeholder="ZIP" />
+          </div>
+          <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+            <button style={{ ...S.btnSecondary, flex: 1 }} onClick={() => setShowModal(false)}>Cancel</button>
+            <button style={{ ...S.btnPrimary, flex: 1 }} onClick={save}>Save Customer</button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ─── VEHICLES ───────────────────────────────────────────────────────────────
+function Vehicles({ data, setData }) {
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState({ customerId: "", year: "", make: "", model: "", vin: "", color: "", notes: "" });
+
+  function save() {
+    if (!form.year || !form.make || !form.model) return;
+    const updated = { ...data, vehicles: [...(data.vehicles || []), { ...form, id: uid(), createdAt: today() }] };
+    setData(updated);
+    saveData(updated);
+    setForm({ customerId: "", year: "", make: "", model: "", vin: "", color: "", notes: "" });
+    setShowModal(false);
+  }
+
+  function remove(id) {
+    const updated = { ...data, vehicles: data.vehicles.filter(v => v.id !== id) };
+    setData(updated);
+    saveData(updated);
+  }
+
+  const customers = data.customers || [];
+  const vehicles = data.vehicles || [];
+  const jobs = data.jobs || [];
+
+  return (
+    <div>
+      <div style={S.sectionHead}>
+        <div style={{ fontSize: 12, color: C.textSecondary }}>{vehicles.length} vehicles</div>
+        <button style={S.btnPrimary} onClick={() => setShowModal(true)}>+ Add Vehicle</button>
+      </div>
+      {vehicles.map(v => {
+        const owner = customers.find(c => c.id === v.customerId);
+        const vJobs = jobs.filter(j => j.vehicleId === v.id);
+        const lastJob = vJobs.sort((a, b) => b.date?.localeCompare(a.date))[0];
+        return (
+          <div key={v.id} style={S.card}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 2 }}>{v.year} {v.make} {v.model}</div>
+                {owner && <div style={{ fontSize: 12, color: C.accent, marginBottom: 4 }}>{owner.name}</div>}
+                {v.vin && <div style={{ fontSize: 11, color: C.textMuted }}>VIN: {v.vin}</div>}
+                {v.color && <div style={{ fontSize: 11, color: C.textMuted }}>Color: {v.color}</div>}
+                {lastJob && <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>Last service: {lastJob.date} · {lastJob.mileage} mi</div>}
+                <div style={{ marginTop: 6 }}><span style={S.tag(C.textSecondary)}>{vJobs.length} service{vJobs.length !== 1 ? "s" : ""}</span></div>
+              </div>
+              <button style={S.btnDanger} onClick={() => remove(v.id)}>Remove</button>
+            </div>
+          </div>
+        );
+      })}
+      {vehicles.length === 0 && <div style={{ fontSize: 12, color: C.textMuted, padding: "20px 0" }}>No vehicles recorded</div>}
+
+      {showModal && (
+        <Modal title="Add Vehicle" onClose={() => setShowModal(false)}>
+          <Input label="Customer" as="select" value={form.customerId} onChange={e => setForm({ ...form, customerId: e.target.value })}>
+            <option value="">Select customer...</option>
+            {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </Input>
+          <div style={S.grid3}>
+            <Input label="Year *" value={form.year} onChange={e => setForm({ ...form, year: e.target.value })} placeholder="2020" />
+            <Input label="Make *" value={form.make} onChange={e => setForm({ ...form, make: e.target.value })} placeholder="Toyota" />
+            <Input label="Model *" value={form.model} onChange={e => setForm({ ...form, model: e.target.value })} placeholder="Camry" />
+          </div>
+          <Input label="VIN" value={form.vin} onChange={e => setForm({ ...form, vin: e.target.value })} placeholder="Vehicle Identification Number" />
+          <Input label="Color" value={form.color} onChange={e => setForm({ ...form, color: e.target.value })} placeholder="e.g. Silver" />
+          <Input label="Notes" as="textarea" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Any vehicle notes..." />
+          <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+            <button style={{ ...S.btnSecondary, flex: 1 }} onClick={() => setShowModal(false)}>Cancel</button>
+            <button style={{ ...S.btnPrimary, flex: 1 }} onClick={save}>Save Vehicle</button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ─── NEW JOB ─────────────────────────────────────────────────────────────────
+function NewJob({ data, setData, onDone }) {
+  const [step, setStep] = useState(0);
+  const [custMode, setCustMode] = useState("existing");
+  const [selectedCustomer, setSelectedCustomer] = useState("");
+  const [selectedVehicle, setSelectedVehicle] = useState("");
+  const [newCust, setNewCust] = useState({ name: "", phone: "", email: "", address: "", city: "", zip: "" });
+  const [newVeh, setNewVeh] = useState({ year: "", make: "", model: "", vin: "", color: "" });
+  const [vehMode, setVehMode] = useState("existing");
+  const [date, setDate] = useState(today());
+  const [mileage, setMileage] = useState("");
+  const [lines, setLines] = useState([{ service: SERVICES[0].name, labor: 100, parts: 50 }]);
+  const [payMethod, setPayMethod] = useState("Cash");
+  const [techNotes, setTechNotes] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [invoice, setInvoice] = useState(null);
+
+  const customers = data.customers || [];
+  const vehicles = data.vehicles || [];
+  const custVehicles = selectedCustomer ? vehicles.filter(v => v.customerId === selectedCustomer) : [];
+
+  function updateLine(i, field, value) {
+    const updated = [...lines];
+    if (field === "service") {
+      const found = SERVICES.find(s => s.name === value);
+      updated[i] = { service: value, labor: found ? found.labor : 0, parts: found ? found.parts : 0 };
+    } else {
+      updated[i] = { ...updated[i], [field]: parseFloat(value) || 0 };
+    }
+    setLines(updated);
+  }
+
+  const labor = lines.reduce((s, l) => s + Number(l.labor || 0), 0);
+  const parts = lines.reduce((s, l) => s + Number(l.parts || 0), 0);
+  const tax = parts * FL_TAX;
+  const grandTotal = labor + parts + tax;
+
+  async function generate() {
+    setGenerating(true);
+    let custObj = customers.find(c => c.id === selectedCustomer);
+    let vehObj = vehicles.find(v => v.id === selectedVehicle);
+
+    // Create new customer/vehicle if needed
+    let updatedData = { ...data };
+    if (custMode === "new") {
+      const nc = { ...newCust, id: uid(), createdAt: today() };
+      updatedData = { ...updatedData, customers: [...(updatedData.customers || []), nc] };
+      custObj = nc;
+    }
+    if (vehMode === "new" || !vehObj) {
+      const nv = { ...newVeh, customerId: custObj?.id, id: uid(), createdAt: today() };
+      updatedData = { ...updatedData, vehicles: [...(updatedData.vehicles || []), nv] };
+      vehObj = nv;
+    }
+
+    let aiNotes = "Thank you for choosing Ocasio Mechanical Services. Your vehicle has been serviced with quality parts and professional care. We look forward to seeing you at your next scheduled maintenance.";
+    try {
+      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          messages: [{
+            role: "user",
+            content: `You are the service assistant for Ocasio Mechanical Services LLC, a professional mobile automotive service in Florida. Write a 2-sentence professional service summary for this receipt. Warm, confident, honest tone. Include a next service reminder. No greeting, just the note.\n\nCustomer: ${custObj?.name}\nVehicle: ${vehObj?.year} ${vehObj?.make} ${vehObj?.model} at ${mileage} miles\nServices: ${lines.map(l => l.service).join(", ")}\nTech notes: ${techNotes || "none"}\nTotal: ${fmt(grandTotal)}`
+          }]
+        })
+      });
+      const d = await resp.json();
+      aiNotes = d.content?.map(b => b.text || "").join("") || aiNotes;
+    } catch (e) { }
+
+    const jn = jobNum();
+    const job = {
+      id: uid(), jobNumber: jn, date, mileage,
+      customerId: custObj?.id, customerName: custObj?.name, customerPhone: custObj?.phone,
+      customerEmail: custObj?.email, customerAddress: custObj?.address,
+      customerCity: custObj?.city, customerZip: custObj?.zip,
+      vehicleId: vehObj?.id, vehicleYear: vehObj?.year, vehicleMake: vehObj?.make,
+      vehicleModel: vehObj?.model, vehicleVin: vehObj?.vin,
+      lines, labor, parts, tax, grandTotal, payMethod, techNotes, aiNotes,
+      createdAt: new Date().toISOString()
+    };
+
+    updatedData = { ...updatedData, jobs: [...(updatedData.jobs || []), job] };
+    setData(updatedData);
+    saveData(updatedData);
+    setInvoice({ job, custObj, vehObj });
+    setGenerating(false);
+    setStep(3);
+  }
+
+  if (step === 3 && invoice) {
+    const { job } = invoice;
+    return (
+      <div>
+        <div style={{ ...S.card, background: "#fff", color: "#111", fontFamily: "inherit" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, paddingBottom: 14, borderBottom: "2px solid #e8633a" }}>
+            <div>
+              <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: "0.05em" }}>OCASIO</div>
+              <div style={{ fontSize: 11, color: "#666", letterSpacing: "0.1em" }}>MECHANICAL SERVICES LLC</div>
+              <div style={{ fontSize: 10, color: "#999" }}>Mobile Automotive Service · Florida</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 10, color: "#999", textTransform: "uppercase" }}>Receipt</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#e8633a" }}>{job.jobNumber}</div>
+              <div style={{ fontSize: 10, color: "#999" }}>{job.date}</div>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+            <div>
+              <div style={{ fontSize: 10, color: "#999", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Bill To</div>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>{job.customerName}</div>
+              <div style={{ fontSize: 12, color: "#555" }}>{job.customerPhone}</div>
+              <div style={{ fontSize: 12, color: "#555" }}>{job.customerAddress}</div>
+              {job.customerCity && <div style={{ fontSize: 12, color: "#555" }}>{job.customerCity}, FL {job.customerZip}</div>}
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: "#999", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Vehicle</div>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>{job.vehicleYear} {job.vehicleMake} {job.vehicleModel}</div>
+              <div style={{ fontSize: 12, color: "#555" }}>Mileage: {job.mileage}</div>
+              {job.vehicleVin && <div style={{ fontSize: 11, color: "#999" }}>VIN: {job.vehicleVin}</div>}
+            </div>
+          </div>
+          <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 12 }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid #ddd" }}>
+                {["Service", "Labor", "Parts", "Total"].map(h => (
+                  <th key={h} style={{ textAlign: h === "Service" ? "left" : "right", fontSize: 10, color: "#999", fontWeight: 400, padding: "4px 0", textTransform: "uppercase", letterSpacing: "0.1em" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {job.lines.map((l, i) => (
+                <tr key={i} style={{ borderBottom: "1px solid #f0f0f0" }}>
+                  <td style={{ fontSize: 12, padding: "7px 0" }}>{l.service}</td>
+                  <td style={{ fontSize: 12, padding: "7px 0", textAlign: "right", color: "#555" }}>{fmt(l.labor)}</td>
+                  <td style={{ fontSize: 12, padding: "7px 0", textAlign: "right", color: "#555" }}>{fmt(l.parts)}</td>
+                  <td style={{ fontSize: 12, padding: "7px 0", textAlign: "right", fontWeight: 600 }}>{fmt(Number(l.labor) + Number(l.parts))}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div style={{ borderTop: "1px solid #eee", paddingTop: 10, marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#666", marginBottom: 4 }}><span>Labor</span><span>{fmt(job.labor)}</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#666", marginBottom: 4 }}><span>Parts</span><span>{fmt(job.parts)}</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#666", marginBottom: 8 }}><span>Tax (7% on parts)</span><span>{fmt(job.tax)}</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, fontWeight: 700, borderTop: "2px solid #111", paddingTop: 8 }}><span>GRAND TOTAL</span><span style={{ color: "#e8633a" }}>{fmt(job.grandTotal)}</span></div>
+            <div style={{ fontSize: 11, color: "#999", marginTop: 4 }}>Payment: {job.payMethod}</div>
+          </div>
+          {job.aiNotes && <div style={{ background: "#f9f9f9", borderLeft: "3px solid #e8633a", padding: "10px 12px", fontSize: 12, color: "#555", lineHeight: 1.6, marginBottom: 12, borderRadius: "0 6px 6px 0" }}>{job.aiNotes}</div>}
+          {job.techNotes && <div style={{ marginBottom: 12 }}><div style={{ fontSize: 10, color: "#999", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Technician Notes</div><div style={{ fontSize: 12, color: "#555" }}>{job.techNotes}</div></div>}
+          <div style={{ borderTop: "1px solid #eee", paddingTop: 12, textAlign: "center" }}>
+            <div style={{ fontSize: 12, fontWeight: 700 }}>PAYMENT DUE UPON RECEIPT</div>
+            <div style={{ fontSize: 11, color: "#999" }}>Make checks payable to: Ocasio Mechanical Services, LLC</div>
+            <div style={{ fontSize: 12, color: "#e8633a", marginTop: 6, fontWeight: 700 }}>Thank You For Your Business!</div>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+          <button style={{ ...S.btnSecondary, flex: 1 }} onClick={onDone}>← Dashboard</button>
+          <button style={{ ...S.btnPrimary, flex: 1 }} onClick={() => window.print()}>Print / Save PDF</button>
+        </div>
+        <p style={{ fontSize: 11, color: C.textMuted, textAlign: "center", marginTop: 8 }}>Mac: File → Print → PDF · iPhone: Share → Print → pinch to zoom</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
+        {["Customer", "Vehicle", "Services", "Invoice"].map((s, i) => (
+          <div key={s} style={{ flex: 1, height: 4, borderRadius: 2, background: i <= step ? C.accent : C.border }} />
+        ))}
+      </div>
+
+      {step === 0 && (
+        <div style={S.card}>
+          <div style={S.cardTitle}>Customer</div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+            {["existing", "new"].map(m => (
+              <button key={m} onClick={() => setCustMode(m)}
+                style={{ ...m === custMode ? S.btnPrimary : S.btnSecondary, flex: 1, padding: "8px" }}>
+                {m === "existing" ? "Existing Customer" : "New Customer"}
+              </button>
+            ))}
+          </div>
+          {custMode === "existing" ? (
+            <Input label="Select Customer" as="select" value={selectedCustomer} onChange={e => { setSelectedCustomer(e.target.value); setSelectedVehicle(""); }}>
+              <option value="">Choose customer...</option>
+              {customers.map(c => <option key={c.id} value={c.id}>{c.name} — {c.phone}</option>)}
+            </Input>
+          ) : (
+            <>
+              <Input label="Full Name *" value={newCust.name} onChange={e => setNewCust({ ...newCust, name: e.target.value })} placeholder="Customer name" />
+              <Input label="Phone" value={newCust.phone} onChange={e => setNewCust({ ...newCust, phone: e.target.value })} placeholder="(555) 555-5555" />
+              <Input label="Email" value={newCust.email} onChange={e => setNewCust({ ...newCust, email: e.target.value })} placeholder="email@example.com" />
+              <Input label="Service Address" value={newCust.address} onChange={e => setNewCust({ ...newCust, address: e.target.value })} placeholder="Street address" />
+              <div style={S.grid2}>
+                <Input label="City" value={newCust.city} onChange={e => setNewCust({ ...newCust, city: e.target.value })} placeholder="City" />
+                <Input label="ZIP" value={newCust.zip} onChange={e => setNewCust({ ...newCust, zip: e.target.value })} placeholder="ZIP" />
+              </div>
+            </>
+          )}
+          <Input label="Service Date" type="date" value={date} onChange={e => setDate(e.target.value)} />
+          <button style={{ ...S.btnPrimary, width: "100%", marginTop: 4 }} onClick={() => setStep(1)}>Next → Vehicle</button>
+        </div>
+      )}
+
+      {step === 1 && (
+        <div style={S.card}>
+          <div style={S.cardTitle}>Vehicle</div>
+          {custVehicles.length > 0 && (
+            <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+              {["existing", "new"].map(m => (
+                <button key={m} onClick={() => setVehMode(m)}
+                  style={{ ...m === vehMode ? S.btnPrimary : S.btnSecondary, flex: 1, padding: "8px" }}>
+                  {m === "existing" ? "Existing Vehicle" : "New Vehicle"}
+                </button>
+              ))}
+            </div>
+          )}
+          {(vehMode === "existing" && custVehicles.length > 0) ? (
+            <Input label="Select Vehicle" as="select" value={selectedVehicle} onChange={e => setSelectedVehicle(e.target.value)}>
+              <option value="">Choose vehicle...</option>
+              {custVehicles.map(v => <option key={v.id} value={v.id}>{v.year} {v.make} {v.model} {v.vin ? `· ${v.vin}` : ""}</option>)}
+            </Input>
+          ) : (
+            <>
+              <div style={S.grid3}>
+                <Input label="Year *" value={newVeh.year} onChange={e => setNewVeh({ ...newVeh, year: e.target.value })} placeholder="2020" />
+                <Input label="Make *" value={newVeh.make} onChange={e => setNewVeh({ ...newVeh, make: e.target.value })} placeholder="Toyota" />
+                <Input label="Model *" value={newVeh.model} onChange={e => setNewVeh({ ...newVeh, model: e.target.value })} placeholder="Camry" />
+              </div>
+              <Input label="VIN (optional)" value={newVeh.vin} onChange={e => setNewVeh({ ...newVeh, vin: e.target.value })} placeholder="Vehicle ID Number" />
+              <Input label="Color" value={newVeh.color} onChange={e => setNewVeh({ ...newVeh, color: e.target.value })} placeholder="Silver" />
+            </>
+          )}
+          <Input label="Current Mileage" type="number" value={mileage} onChange={e => setMileage(e.target.value)} placeholder="e.g. 45000" />
+          <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+            <button style={{ ...S.btnSecondary, flex: 1 }} onClick={() => setStep(0)}>← Back</button>
+            <button style={{ ...S.btnPrimary, flex: 1 }} onClick={() => setStep(2)}>Next → Services</button>
+          </div>
+        </div>
+      )}
+
+      {step === 2 && (
+        <div style={S.card}>
+          <div style={S.cardTitle}>Services Performed</div>
+          {lines.map((line, i) => (
+            <div key={i} style={{ background: C.elevated, borderRadius: 6, padding: 12, marginBottom: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <span style={{ fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em" }}>Line {i + 1}</span>
+                {lines.length > 1 && <button onClick={() => setLines(lines.filter((_, idx) => idx !== i))} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 18 }}>×</button>}
+              </div>
+              <Input as="select" value={line.service} onChange={e => updateLine(i, "service", e.target.value)}>
+                {SERVICES.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+              </Input>
+              <div style={S.grid2}>
+                <Input label="Labor ($)" type="number" value={line.labor} onChange={e => updateLine(i, "labor", e.target.value)} />
+                <Input label="Parts ($)" type="number" value={line.parts} onChange={e => updateLine(i, "parts", e.target.value)} />
+              </div>
+            </div>
+          ))}
+          <button style={{ ...S.btnSecondary, width: "100%", marginBottom: 12 }}
+            onClick={() => setLines([...lines, { service: SERVICES[0].name, labor: 100, parts: 50 }])}>
+            + Add Service Line
+          </button>
+          <Input label="Tech Notes" as="textarea" value={techNotes} onChange={e => setTechNotes(e.target.value)} placeholder="Observations, recommendations..." />
+          <div style={{ marginBottom: 12 }}>
+            <label style={S.label}>Payment Method</label>
+            <div style={{ display: "flex", gap: 8 }}>
+              {["Cash", "Card", "Venmo", "Zelle"].map(m => (
+                <button key={m} onClick={() => setPayMethod(m)}
+                  style={{ flex: 1, padding: "8px 4px", background: payMethod === m ? C.accent : C.elevated, border: `1px solid ${payMethod === m ? C.accent : C.border}`, borderRadius: 6, color: payMethod === m ? "#fff" : C.textSecondary, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+                  {m}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div style={{ background: C.elevated, borderRadius: 6, padding: 12, marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C.textSecondary, marginBottom: 4 }}><span>Labor</span><span>{fmt(labor)}</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C.textSecondary, marginBottom: 4 }}><span>Parts</span><span>{fmt(parts)}</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C.textSecondary, marginBottom: 8 }}><span>Tax (7%)</span><span>{fmt(tax)}</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, fontWeight: 700, borderTop: `1px solid ${C.border}`, paddingTop: 8 }}><span>Total</span><span style={{ color: C.accent }}>{fmt(grandTotal)}</span></div>
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button style={{ ...S.btnSecondary, flex: 1 }} onClick={() => setStep(1)}>← Back</button>
+            <button style={{ ...S.btnPrimary, flex: 1 }} onClick={generate} disabled={generating}>
+              {generating ? "Generating..." : "Generate Invoice →"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── JOB HISTORY ────────────────────────────────────────────────────────────
+function JobHistory({ data }) {
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState(null);
+  const jobs = [...(data.jobs || [])].sort((a, b) => b.date?.localeCompare(a.date));
+  const filtered = jobs.filter(j =>
+    j.customerName?.toLowerCase().includes(search.toLowerCase()) ||
+    j.jobNumber?.includes(search) ||
+    j.vehicleMake?.toLowerCase().includes(search.toLowerCase()) ||
+    j.vehicleModel?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  if (selected) {
+    const j = selected;
+    return (
+      <div>
+        <button style={{ ...S.btnSecondary, marginBottom: 16 }} onClick={() => setSelected(null)}>← Back to Jobs</button>
+        <div style={{ ...S.card, background: "#fff", color: "#111" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, paddingBottom: 14, borderBottom: "2px solid #e8633a" }}>
+            <div>
+              <div style={{ fontSize: 20, fontWeight: 700 }}>OCASIO</div>
+              <div style={{ fontSize: 11, color: "#666", letterSpacing: "0.1em" }}>MECHANICAL SERVICES LLC</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#e8633a" }}>{j.jobNumber}</div>
+              <div style={{ fontSize: 10, color: "#999" }}>{j.date}</div>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+            <div>
+              <div style={{ fontSize: 10, color: "#999", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Bill To</div>
+              <div style={{ fontWeight: 600 }}>{j.customerName}</div>
+              <div style={{ fontSize: 12, color: "#555" }}>{j.customerPhone}</div>
+              <div style={{ fontSize: 12, color: "#555" }}>{j.customerAddress}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: "#999", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Vehicle</div>
+              <div style={{ fontWeight: 600 }}>{j.vehicleYear} {j.vehicleMake} {j.vehicleModel}</div>
+              <div style={{ fontSize: 12, color: "#555" }}>Mileage: {j.mileage}</div>
+            </div>
+          </div>
+          <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 12 }}>
+            <thead><tr style={{ borderBottom: "1px solid #ddd" }}>
+              {["Service", "Labor", "Parts", "Total"].map(h => <th key={h} style={{ textAlign: h === "Service" ? "left" : "right", fontSize: 10, color: "#999", fontWeight: 400, padding: "4px 0", textTransform: "uppercase" }}>{h}</th>)}
+            </tr></thead>
+            <tbody>{j.lines?.map((l, i) => (
+              <tr key={i} style={{ borderBottom: "1px solid #f0f0f0" }}>
+                <td style={{ fontSize: 12, padding: "7px 0" }}>{l.service}</td>
+                <td style={{ fontSize: 12, padding: "7px 0", textAlign: "right", color: "#555" }}>{fmt(l.labor)}</td>
+                <td style={{ fontSize: 12, padding: "7px 0", textAlign: "right", color: "#555" }}>{fmt(l.parts)}</td>
+                <td style={{ fontSize: 12, padding: "7px 0", textAlign: "right", fontWeight: 600 }}>{fmt(Number(l.labor) + Number(l.parts))}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+          <div style={{ borderTop: "1px solid #eee", paddingTop: 10, marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#666", marginBottom: 4 }}><span>Labor</span><span>{fmt(j.labor)}</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#666", marginBottom: 4 }}><span>Parts</span><span>{fmt(j.parts)}</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#666", marginBottom: 8 }}><span>Tax</span><span>{fmt(j.tax)}</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, fontWeight: 700, borderTop: "2px solid #111", paddingTop: 8 }}><span>GRAND TOTAL</span><span style={{ color: "#e8633a" }}>{fmt(j.grandTotal)}</span></div>
+            <div style={{ fontSize: 11, color: "#999", marginTop: 4 }}>Payment: {j.payMethod}</div>
+          </div>
+          {j.aiNotes && <div style={{ background: "#f9f9f9", borderLeft: "3px solid #e8633a", padding: "10px 12px", fontSize: 12, color: "#555", lineHeight: 1.6, marginBottom: 12, borderRadius: "0 6px 6px 0" }}>{j.aiNotes}</div>}
+          <div style={{ borderTop: "1px solid #eee", paddingTop: 12, textAlign: "center" }}>
+            <div style={{ fontSize: 12, fontWeight: 700 }}>PAYMENT DUE UPON RECEIPT</div>
+            <div style={{ fontSize: 11, color: "#999" }}>Make checks payable to: Ocasio Mechanical Services, LLC</div>
+            <div style={{ fontSize: 12, color: "#e8633a", marginTop: 6, fontWeight: 700 }}>Thank You For Your Business!</div>
+          </div>
+        </div>
+        <button style={{ ...S.btnPrimary, width: "100%", marginTop: 12 }} onClick={() => window.print()}>Print / Save PDF</button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <input style={{ ...S.input, marginBottom: 14 }} placeholder="Search by customer, job #, vehicle..." value={search} onChange={e => setSearch(e.target.value)} />
+      <div style={{ fontSize: 12, color: C.textSecondary, marginBottom: 12 }}>{filtered.length} jobs</div>
+      {filtered.map(j => (
+        <div key={j.id} style={{ ...S.card, cursor: "pointer" }} onClick={() => setSelected(j)}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{j.customerName}</div>
+              <div style={{ fontSize: 12, color: C.textSecondary }}>{j.vehicleYear} {j.vehicleMake} {j.vehicleModel} · {j.mileage} mi</div>
+              <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>{j.jobNumber} · {j.date}</div>
+              <div style={{ fontSize: 11, color: C.textMuted }}>{j.lines?.map(l => l.service).join(", ")}</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 15, color: C.green, fontWeight: 700 }}>{fmt(j.grandTotal)}</div>
+              <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>{j.payMethod}</div>
+              <div style={{ fontSize: 11, color: C.accent, marginTop: 4 }}>View →</div>
+            </div>
+          </div>
+        </div>
+      ))}
+      {filtered.length === 0 && <div style={{ fontSize: 12, color: C.textMuted, padding: "20px 0" }}>No jobs found</div>}
+    </div>
+  );
+}
+
+// ─── EXPENSES ───────────────────────────────────────────────────────────────
+function Expenses({ data, setData }) {
+  const [showModal, setShowModal] = useState(false);
+  const [filter, setFilter] = useState("All");
+  const [form, setForm] = useState({ date: today(), category: EXPENSE_CATS[0], description: "", amount: "", vendor: "", jobId: "", receipt: "" });
+
+  function save() {
+    if (!form.amount || !form.description) return;
+    const updated = { ...data, expenses: [...(data.expenses || []), { ...form, id: uid() }] };
+    setData(updated);
+    saveData(updated);
+    setForm({ date: today(), category: EXPENSE_CATS[0], description: "", amount: "", vendor: "", jobId: "", receipt: "" });
+    setShowModal(false);
+  }
+
+  function remove(id) {
+    const updated = { ...data, expenses: data.expenses.filter(e => e.id !== id) };
+    setData(updated);
+    saveData(updated);
+  }
+
+  const expenses = data.expenses || [];
+  const filtered = filter === "All" ? expenses : expenses.filter(e => e.category === filter);
+  const sorted = [...filtered].sort((a, b) => b.date?.localeCompare(a.date));
+  const total = filtered.reduce((s, e) => s + Number(e.amount || 0), 0);
+
+  const catTotals = EXPENSE_CATS.map(cat => ({
+    cat,
+    total: expenses.filter(e => e.category === cat).reduce((s, e) => s + Number(e.amount || 0), 0)
+  })).filter(x => x.total > 0).sort((a, b) => b.total - a.total);
+
+  return (
+    <div>
+      <div style={S.sectionHead}>
+        <div>
+          <div style={{ fontSize: 12, color: C.textSecondary }}>{sorted.length} expenses</div>
+          <div style={{ fontSize: 14, color: C.red, fontWeight: 600 }}>{fmt(total)} {filter !== "All" ? `in ${filter}` : "total"}</div>
+        </div>
+        <button style={S.btnPrimary} onClick={() => setShowModal(true)}>+ Log Expense</button>
+      </div>
+
+      {catTotals.length > 0 && (
+        <div style={{ ...S.card, marginBottom: 14 }}>
+          <div style={S.cardTitle}>By Category</div>
+          {catTotals.map(x => (
+            <div key={x.cat} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0" }}>
+              <div style={{ fontSize: 12, color: C.textSecondary }}>{x.cat}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ height: 4, width: Math.max(4, (x.total / catTotals[0].total) * 80), background: C.accent, borderRadius: 2 }} />
+                <div style={{ fontSize: 13, color: C.red, minWidth: 70, textAlign: "right" }}>{fmt(x.total)}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+        {["All", ...EXPENSE_CATS].map(cat => (
+          <button key={cat} onClick={() => setFilter(cat)}
+            style={{ padding: "5px 12px", background: filter === cat ? C.accent : C.elevated, border: `1px solid ${filter === cat ? C.accent : C.border}`, borderRadius: 20, color: filter === cat ? "#fff" : C.textSecondary, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      {sorted.map(e => (
+        <div key={e.id} style={S.card}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 2 }}>{e.description}</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 4 }}>
+                <span style={S.tag(C.accent)}>{e.category}</span>
+                {e.vendor && <span style={S.tag(C.textSecondary)}>{e.vendor}</span>}
+              </div>
+              <div style={{ fontSize: 11, color: C.textMuted }}>{e.date}</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 15, color: C.red, fontWeight: 700, marginBottom: 8 }}>{fmt(e.amount)}</div>
+              <button style={S.btnDanger} onClick={() => remove(e.id)}>Remove</button>
+            </div>
+          </div>
+        </div>
+      ))}
+      {sorted.length === 0 && <div style={{ fontSize: 12, color: C.textMuted, padding: "20px 0" }}>No expenses logged</div>}
+
+      {showModal && (
+        <Modal title="Log Expense" onClose={() => setShowModal(false)}>
+          <div style={S.grid2}>
+            <Input label="Date" type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
+            <Input label="Amount ($) *" type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} placeholder="0.00" />
+          </div>
+          <Input label="Category" as="select" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
+            {EXPENSE_CATS.map(c => <option key={c} value={c}>{c}</option>)}
+          </Input>
+          <Input label="Description *" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="What was purchased" />
+          <Input label="Vendor / Store" value={form.vendor} onChange={e => setForm({ ...form, vendor: e.target.value })} placeholder="AutoZone, Walmart, etc." />
+          <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+            <button style={{ ...S.btnSecondary, flex: 1 }} onClick={() => setShowModal(false)}>Cancel</button>
+            <button style={{ ...S.btnPrimary, flex: 1 }} onClick={save}>Save Expense</button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ─── MILEAGE ────────────────────────────────────────────────────────────────
+function Mileage({ data, setData }) {
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState({ date: today(), origin: "", destination: "", miles: "", purpose: "", jobId: "" });
+
+  function save() {
+    if (!form.miles || !form.destination) return;
+    const updated = { ...data, mileage: [...(data.mileage || []), { ...form, id: uid() }] };
+    setData(updated);
+    saveData(updated);
+    setForm({ date: today(), origin: "", destination: "", miles: "", purpose: "", jobId: "" });
+    setShowModal(false);
+  }
+
+  function remove(id) {
+    const updated = { ...data, mileage: data.mileage.filter(m => m.id !== id) };
+    setData(updated);
+    saveData(updated);
+  }
+
+  const logs = [...(data.mileage || [])].sort((a, b) => b.date?.localeCompare(a.date));
+  const totalMiles = logs.reduce((s, m) => s + Number(m.miles || 0), 0);
+  const deduction = totalMiles * MILEAGE_RATE;
+
+  return (
+    <div>
+      <div style={S.sectionHead}>
+        <div>
+          <div style={{ fontSize: 12, color: C.textSecondary }}>{logs.length} trips · {totalMiles.toFixed(1)} miles</div>
+          <div style={{ fontSize: 14, color: C.green, fontWeight: 600 }}>{fmt(deduction)} deduction @ $0.67/mi</div>
+        </div>
+        <button style={S.btnPrimary} onClick={() => setShowModal(true)}>+ Log Miles</button>
+      </div>
+
+      <div style={{ ...S.card, background: C.elevated, marginBottom: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+          <span style={{ color: C.textSecondary }}>Total Miles Logged</span>
+          <span style={{ fontWeight: 600 }}>{totalMiles.toFixed(1)} mi</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 6 }}>
+          <span style={{ color: C.textSecondary }}>IRS Rate (2024)</span>
+          <span>$0.67 / mile</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 700, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.border}` }}>
+          <span>Tax Deduction</span>
+          <span style={{ color: C.green }}>{fmt(deduction)}</span>
+        </div>
+      </div>
+
+      {logs.map(m => (
+        <div key={m.id} style={S.card}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 500 }}>{m.origin || "Start"} → {m.destination}</div>
+              {m.purpose && <div style={{ fontSize: 12, color: C.textSecondary, marginTop: 2 }}>{m.purpose}</div>}
+              <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>{m.date}</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>{m.miles} mi</div>
+              <button style={S.btnDanger} onClick={() => remove(m.id)}>Remove</button>
+            </div>
+          </div>
+        </div>
+      ))}
+      {logs.length === 0 && <div style={{ fontSize: 12, color: C.textMuted, padding: "20px 0" }}>No mileage logged</div>}
+
+      {showModal && (
+        <Modal title="Log Mileage" onClose={() => setShowModal(false)}>
+          <Input label="Date" type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
+          <div style={S.grid2}>
+            <Input label="From (origin)" value={form.origin} onChange={e => setForm({ ...form, origin: e.target.value })} placeholder="Your location" />
+            <Input label="To (destination) *" value={form.destination} onChange={e => setForm({ ...form, destination: e.target.value })} placeholder="Customer address" />
+          </div>
+          <Input label="Miles *" type="number" value={form.miles} onChange={e => setForm({ ...form, miles: e.target.value })} placeholder="0.0" />
+          <Input label="Purpose" value={form.purpose} onChange={e => setForm({ ...form, purpose: e.target.value })} placeholder="e.g. Oil change service call, parts run" />
+          <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+            <button style={{ ...S.btnSecondary, flex: 1 }} onClick={() => setShowModal(false)}>Cancel</button>
+            <button style={{ ...S.btnPrimary, flex: 1 }} onClick={save}>Save</button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ─── APPOINTMENTS ────────────────────────────────────────────────────────────
+function Appointments({ data, setData }) {
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState({ date: today(), time: "", customerId: "", vehicleId: "", services: "", notes: "", status: "Scheduled" });
+
+  function save() {
+    if (!form.date || !form.customerId) return;
+    const updated = { ...data, appointments: [...(data.appointments || []), { ...form, id: uid() }] };
+    setData(updated);
+    saveData(updated);
+    setForm({ date: today(), time: "", customerId: "", vehicleId: "", services: "", notes: "", status: "Scheduled" });
+    setShowModal(false);
+  }
+
+  function remove(id) {
+    const updated = { ...data, appointments: data.appointments.filter(a => a.id !== id) };
+    setData(updated);
+    saveData(updated);
+  }
+
+  function updateStatus(id, status) {
+    const updated = { ...data, appointments: data.appointments.map(a => a.id === id ? { ...a, status } : a) };
+    setData(updated);
+    saveData(updated);
+  }
+
+  const appts = [...(data.appointments || [])].sort((a, b) => a.date?.localeCompare(b.date));
+  const upcoming = appts.filter(a => a.date >= today() && a.status !== "Cancelled");
+  const past = appts.filter(a => a.date < today() || a.status === "Cancelled");
+  const customers = data.customers || [];
+  const vehicles = data.vehicles || [];
+  const selectedCustVehicles = form.customerId ? vehicles.filter(v => v.customerId === form.customerId) : [];
+
+  const statusColor = { Scheduled: C.yellow, Confirmed: C.green, Completed: C.textMuted, Cancelled: C.red };
+
+  function ApptCard({ a }) {
+    const cust = customers.find(c => c.id === a.customerId);
+    const veh = vehicles.find(v => v.id === a.vehicleId);
+    return (
+      <div style={S.card}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+              <span style={{ fontSize: 14, fontWeight: 600 }}>{cust?.name || "Unknown"}</span>
+              <span style={S.tag(statusColor[a.status] || C.textMuted)}>{a.status}</span>
+            </div>
+            {veh && <div style={{ fontSize: 12, color: C.textSecondary }}>{veh.year} {veh.make} {veh.model}</div>}
+            {a.services && <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>{a.services}</div>}
+            <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>{a.date}{a.time && ` at ${a.time}`}</div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
+            <select value={a.status} onChange={e => updateStatus(a.id, e.target.value)}
+              style={{ ...S.input, width: "auto", fontSize: 11, padding: "4px 8px" }}>
+              {["Scheduled", "Confirmed", "Completed", "Cancelled"].map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <button style={S.btnDanger} onClick={() => remove(a.id)}>Remove</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={S.sectionHead}>
+        <div style={{ fontSize: 12, color: C.textSecondary }}>{upcoming.length} upcoming</div>
+        <button style={S.btnPrimary} onClick={() => setShowModal(true)}>+ Book Appointment</button>
+      </div>
+
+      {upcoming.length > 0 && (
+        <>
+          <div style={S.cardTitle}>Upcoming</div>
+          {upcoming.map(a => <ApptCard key={a.id} a={a} />)}
+        </>
+      )}
+      {upcoming.length === 0 && <div style={{ fontSize: 12, color: C.textMuted, padding: "8px 0 16px" }}>No upcoming appointments</div>}
+
+      {past.length > 0 && (
+        <>
+          <div style={{ ...S.cardTitle, marginTop: 16 }}>Past / Cancelled</div>
+          {past.map(a => <ApptCard key={a.id} a={a} />)}
+        </>
+      )}
+
+      {showModal && (
+        <Modal title="Book Appointment" onClose={() => setShowModal(false)}>
+          <div style={S.grid2}>
+            <Input label="Date *" type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
+            <Input label="Time" type="time" value={form.time} onChange={e => setForm({ ...form, time: e.target.value })} />
+          </div>
+          <Input label="Customer *" as="select" value={form.customerId} onChange={e => setForm({ ...form, customerId: e.target.value, vehicleId: "" })}>
+            <option value="">Select customer...</option>
+            {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </Input>
+          {selectedCustVehicles.length > 0 && (
+            <Input label="Vehicle" as="select" value={form.vehicleId} onChange={e => setForm({ ...form, vehicleId: e.target.value })}>
+              <option value="">Select vehicle...</option>
+              {selectedCustVehicles.map(v => <option key={v.id} value={v.id}>{v.year} {v.make} {v.model}</option>)}
+            </Input>
+          )}
+          <Input label="Services Requested" value={form.services} onChange={e => setForm({ ...form, services: e.target.value })} placeholder="e.g. Synthetic oil change, tire rotation" />
+          <Input label="Notes" as="textarea" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Any special instructions..." />
+          <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+            <button style={{ ...S.btnSecondary, flex: 1 }} onClick={() => setShowModal(false)}>Cancel</button>
+            <button style={{ ...S.btnPrimary, flex: 1 }} onClick={save}>Save Appointment</button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ─── MAIN APP ────────────────────────────────────────────────────────────────
+const TABS = ["Dashboard", "New Job", "Jobs", "Customers", "Vehicles", "Expenses", "Mileage", "Appointments"];
+
+export default function App() {
+  const [tab, setTab] = useState("Dashboard");
+  const [data, setData] = useState(defaultData);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData().then(d => { setData(d); setLoading(false); });
+  }, []);
+
+  if (loading) {
+    return (
+      <div style={{ ...S.app, display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 13, color: C.accent, letterSpacing: "0.2em", marginBottom: 8 }}>OCASIO</div>
+          <div style={{ fontSize: 11, color: C.textMuted, letterSpacing: "0.15em" }}>LOADING SYSTEM...</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={S.app}>
+      <div style={S.header}>
+        <div>
+          <div style={{ fontSize: 11, color: C.accent, letterSpacing: "0.2em", textTransform: "uppercase" }}>Ocasio Mechanical Services LLC</div>
+          <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "0.05em" }}>Business OS</div>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 10, color: C.textMuted }}>{new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}</div>
+          <div style={{ fontSize: 11, color: C.textSecondary, marginTop: 2 }}>{(data.jobs || []).length} jobs · {(data.customers || []).length} customers</div>
+        </div>
+      </div>
+
+      <div style={S.nav}>
+        {TABS.map(t => (
+          <button key={t} style={S.navBtn(tab === t)} onClick={() => setTab(t)}>{t}</button>
+        ))}
+      </div>
+
+      <div style={S.content}>
+        {tab === "Dashboard" && <Dashboard data={data} />}
+        {tab === "New Job" && <NewJob data={data} setData={setData} onDone={() => setTab("Dashboard")} />}
+        {tab === "Jobs" && <JobHistory data={data} />}
+        {tab === "Customers" && <Customers data={data} setData={setData} />}
+        {tab === "Vehicles" && <Vehicles data={data} setData={setData} />}
+        {tab === "Expenses" && <Expenses data={data} setData={setData} />}
+        {tab === "Mileage" && <Mileage data={data} setData={setData} />}
+        {tab === "Appointments" && <Appointments data={data} setData={setData} />}
+      </div>
+    </div>
+  );
+}
