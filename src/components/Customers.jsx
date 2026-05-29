@@ -4,10 +4,21 @@ import { uid, today, saveData } from "../helpers.js";
 import Input from "./Input.jsx";
 import Modal from "./Modal.jsx";
 
+const EMPTY_CUSTOMER = { name: "", phone: "", email: "", address: "", city: "", zip: "" };
+const EMPTY_VEHICLE = { year: "", make: "", model: "", vin: "", color: "", notes: "" };
+
 export default function Customers({ data, setData }) {
-  const [showModal, setShowModal] = useState(false);
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [customerForm, setCustomerForm] = useState(EMPTY_CUSTOMER);
   const [search, setSearch] = useState("");
-  const [form, setForm] = useState({ name: "", phone: "", email: "", address: "", city: "", zip: "" });
+  const [expanded, setExpanded] = useState(null);
+  const [vehicleModal, setVehicleModal] = useState(null); // customerId
+  const [vehicleForm, setVehicleForm] = useState(EMPTY_VEHICLE);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [confirmDeleteVehicle, setConfirmDeleteVehicle] = useState(null);
+
+  const vehicles = data.vehicles || [];
+  const jobs = data.jobs || [];
 
   const filtered = (data.customers || []).filter(c =>
     c.name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -15,65 +26,199 @@ export default function Customers({ data, setData }) {
     c.email?.toLowerCase().includes(search.toLowerCase())
   );
 
-  function save() {
-    if (!form.name.trim()) return;
-    const updated = { ...data, customers: [...(data.customers || []), { ...form, id: uid(), createdAt: today() }] };
+  function saveCustomer() {
+    if (!customerForm.name.trim()) return;
+    const updated = { ...data, customers: [...(data.customers || []), { ...customerForm, id: uid(), createdAt: today() }] };
     setData(updated);
     saveData(updated);
-    setForm({ name: "", phone: "", email: "", address: "", city: "", zip: "" });
-    setShowModal(false);
+    setCustomerForm(EMPTY_CUSTOMER);
+    setShowCustomerModal(false);
   }
 
-  function remove(id) {
-    const updated = { ...data, customers: data.customers.filter(c => c.id !== id) };
+  function removeCustomer(id) {
+    const updated = {
+      ...data,
+      customers: data.customers.filter(c => c.id !== id),
+      vehicles: (data.vehicles || []).filter(v => v.customerId !== id),
+    };
     setData(updated);
     saveData(updated);
+    setExpanded(null);
+    setConfirmDelete(null);
   }
 
-  const vehicles = data.vehicles || [];
+  function saveVehicle() {
+    if (!vehicleForm.year || !vehicleForm.make || !vehicleForm.model) return;
+    const updated = {
+      ...data,
+      vehicles: [...(data.vehicles || []), { ...vehicleForm, customerId: vehicleModal, id: uid(), createdAt: today() }],
+    };
+    setData(updated);
+    saveData(updated);
+    setVehicleForm(EMPTY_VEHICLE);
+    setVehicleModal(null);
+  }
+
+  function removeVehicle(id) {
+    const updated = { ...data, vehicles: (data.vehicles || []).filter(v => v.id !== id) };
+    setData(updated);
+    saveData(updated);
+    setConfirmDeleteVehicle(null);
+  }
 
   return (
     <div>
       <div style={S.sectionHead}>
-        <div style={{ fontSize: 12, color: C.textSecondary }}>{filtered.length} customers</div>
-        <button style={S.btnPrimary} onClick={() => setShowModal(true)}>+ Add Customer</button>
+        <div style={{ fontSize: 12, color: C.textSecondary }}>{filtered.length} customer{filtered.length !== 1 ? "s" : ""}</div>
+        <button style={S.btnPrimary} onClick={() => setShowCustomerModal(true)}>+ Add Customer</button>
       </div>
-      <input style={{ ...S.input, marginBottom: 14 }} placeholder="Search customers..." value={search} onChange={e => setSearch(e.target.value)} />
+
+      <input
+        style={{ ...S.input, marginBottom: 14 }}
+        placeholder="Search by name, phone, or email..."
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+      />
+
       {filtered.map(c => {
         const cvs = vehicles.filter(v => v.customerId === c.id);
+        const cJobs = jobs.filter(j => j.customerId === c.id || cvs.some(v => v.id === j.vehicleId));
+        const isOpen = expanded === c.id;
+
         return (
-          <div key={c.id} style={S.card}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div key={c.id} style={{ ...S.card, padding: 0, overflow: "hidden" }}>
+            {/* Customer header row — click to expand */}
+            <div
+              style={{ padding: "14px 18px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
+              onClick={() => setExpanded(isOpen ? null : c.id)}
+            >
               <div>
-                <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>{c.name}</div>
-                <div style={{ fontSize: 12, color: C.textSecondary }}>{c.phone}{c.email && ` · ${c.email}`}</div>
-                {c.address && <div style={{ fontSize: 12, color: C.textMuted }}>{c.address}, {c.city} {c.zip}</div>}
-                {cvs.length > 0 && (
-                  <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {cvs.map(v => <span key={v.id} style={S.tag(C.accent)}>{v.year} {v.make} {v.model}</span>)}
-                  </div>
+                <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 2 }}>{c.name}</div>
+                <div style={{ fontSize: 12, color: C.textSecondary }}>
+                  {c.phone}{c.email ? ` · ${c.email}` : ""}
+                </div>
+                {c.address && (
+                  <div style={{ fontSize: 12, color: C.textMuted }}>{c.address}{c.city ? `, ${c.city}` : ""}{c.zip ? ` ${c.zip}` : ""}</div>
                 )}
               </div>
-              <button style={S.btnDanger} onClick={() => remove(c.id)}>Remove</button>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 11, color: C.accent }}>{cvs.length} vehicle{cvs.length !== 1 ? "s" : ""}</div>
+                  <div style={{ fontSize: 11, color: C.textMuted }}>{cJobs.length} job{cJobs.length !== 1 ? "s" : ""}</div>
+                </div>
+                <div style={{ fontSize: 18, color: C.textMuted, userSelect: "none" }}>{isOpen ? "▲" : "▼"}</div>
+              </div>
             </div>
+
+            {/* Expanded detail */}
+            {isOpen && (
+              <div style={{ borderTop: `1px solid ${C.border}`, padding: "14px 18px" }}>
+
+                {/* Vehicles section */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <div style={{ fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600 }}>Vehicles</div>
+                  <button
+                    style={{ ...S.btnPrimary, padding: "5px 14px", fontSize: 11 }}
+                    onClick={() => { setVehicleModal(c.id); setVehicleForm(EMPTY_VEHICLE); }}
+                  >
+                    + Add Vehicle
+                  </button>
+                </div>
+
+                {cvs.length === 0 && (
+                  <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 12 }}>No vehicles on file — add one above.</div>
+                )}
+
+                {cvs.map(v => {
+                  const vJobs = jobs.filter(j => j.vehicleId === v.id);
+                  const lastJob = [...vJobs].sort((a, b) => b.date?.localeCompare(a.date))[0];
+                  return (
+                    <div key={v.id} style={{ background: C.elevated, borderRadius: 6, padding: "10px 14px", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{v.year} {v.make} {v.model}</div>
+                        {v.color && <div style={{ fontSize: 11, color: C.textMuted }}>Color: {v.color}</div>}
+                        {v.vin && <div style={{ fontSize: 11, color: C.textMuted }}>VIN: {v.vin}</div>}
+                        {lastJob
+                          ? <div style={{ fontSize: 11, color: C.textSecondary, marginTop: 4 }}>Last service: {lastJob.date} · {lastJob.mileage} mi</div>
+                          : <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>No service history</div>
+                        }
+                        <div style={{ marginTop: 4 }}>
+                          <span style={S.tag(C.textSecondary)}>{vJobs.length} job{vJobs.length !== 1 ? "s" : ""}</span>
+                        </div>
+                        {v.notes && <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4, fontStyle: "italic" }}>{v.notes}</div>}
+                      </div>
+                      <div>
+                        {confirmDeleteVehicle === v.id ? (
+                          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                            <span style={{ fontSize: 11, color: C.red }}>Remove?</span>
+                            <button style={{ ...S.btnDanger, padding: "3px 10px", fontSize: 11 }} onClick={() => removeVehicle(v.id)}>Yes</button>
+                            <button style={{ ...S.btnSecondary, padding: "3px 10px", fontSize: 11 }} onClick={() => setConfirmDeleteVehicle(null)}>No</button>
+                          </div>
+                        ) : (
+                          <button style={{ ...S.btnDanger, padding: "4px 10px", fontSize: 11 }} onClick={() => setConfirmDeleteVehicle(v.id)}>Remove</button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Customer actions */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12, marginTop: 4, display: "flex", justifyContent: "flex-end" }}>
+                  {confirmDelete === c.id ? (
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <span style={{ fontSize: 12, color: C.red }}>Delete customer and all their vehicles?</span>
+                      <button style={S.btnDanger} onClick={() => removeCustomer(c.id)}>Yes, delete</button>
+                      <button style={S.btnSecondary} onClick={() => setConfirmDelete(null)}>Cancel</button>
+                    </div>
+                  ) : (
+                    <button style={S.btnDanger} onClick={() => setConfirmDelete(c.id)}>Delete Customer</button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         );
       })}
-      {filtered.length === 0 && <div style={{ fontSize: 12, color: C.textMuted, padding: "20px 0" }}>No customers found</div>}
 
-      {showModal && (
-        <Modal title="New Customer" onClose={() => setShowModal(false)}>
-          <Input label="Full Name *" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Customer name" />
-          <Input label="Phone" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="(555) 555-5555" />
-          <Input label="Email" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="email@example.com" />
-          <Input label="Service Address" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} placeholder="Street address" />
+      {filtered.length === 0 && (
+        <div style={{ fontSize: 12, color: C.textMuted, padding: "20px 0" }}>No customers found</div>
+      )}
+
+      {/* Add Customer modal */}
+      {showCustomerModal && (
+        <Modal title="New Customer" onClose={() => setShowCustomerModal(false)}>
+          <Input label="Full Name *" value={customerForm.name} onChange={e => setCustomerForm({ ...customerForm, name: e.target.value })} placeholder="Customer name" />
+          <Input label="Phone" value={customerForm.phone} onChange={e => setCustomerForm({ ...customerForm, phone: e.target.value })} placeholder="(555) 555-5555" />
+          <Input label="Email" type="email" value={customerForm.email} onChange={e => setCustomerForm({ ...customerForm, email: e.target.value })} placeholder="email@example.com" />
+          <Input label="Service Address" value={customerForm.address} onChange={e => setCustomerForm({ ...customerForm, address: e.target.value })} placeholder="Street address" />
           <div style={S.grid2}>
-            <Input label="City" value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} placeholder="City" />
-            <Input label="ZIP" value={form.zip} onChange={e => setForm({ ...form, zip: e.target.value })} placeholder="ZIP" />
+            <Input label="City" value={customerForm.city} onChange={e => setCustomerForm({ ...customerForm, city: e.target.value })} placeholder="City" />
+            <Input label="ZIP" value={customerForm.zip} onChange={e => setCustomerForm({ ...customerForm, zip: e.target.value })} placeholder="ZIP" />
           </div>
           <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-            <button style={{ ...S.btnSecondary, flex: 1 }} onClick={() => setShowModal(false)}>Cancel</button>
-            <button style={{ ...S.btnPrimary, flex: 1 }} onClick={save}>Save Customer</button>
+            <button style={{ ...S.btnSecondary, flex: 1 }} onClick={() => setShowCustomerModal(false)}>Cancel</button>
+            <button style={{ ...S.btnPrimary, flex: 1 }} onClick={saveCustomer}>Save Customer</button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Add Vehicle modal */}
+      {vehicleModal && (
+        <Modal title="Add Vehicle" onClose={() => setVehicleModal(null)}>
+          <div style={{ fontSize: 12, color: C.accent, marginBottom: 12, fontWeight: 500 }}>
+            {(data.customers || []).find(c => c.id === vehicleModal)?.name}
+          </div>
+          <div style={S.grid3}>
+            <Input label="Year *" value={vehicleForm.year} onChange={e => setVehicleForm({ ...vehicleForm, year: e.target.value })} placeholder="2020" />
+            <Input label="Make *" value={vehicleForm.make} onChange={e => setVehicleForm({ ...vehicleForm, make: e.target.value })} placeholder="Toyota" />
+            <Input label="Model *" value={vehicleForm.model} onChange={e => setVehicleForm({ ...vehicleForm, model: e.target.value })} placeholder="Camry" />
+          </div>
+          <Input label="Color" value={vehicleForm.color} onChange={e => setVehicleForm({ ...vehicleForm, color: e.target.value })} placeholder="e.g. Silver" />
+          <Input label="VIN" value={vehicleForm.vin} onChange={e => setVehicleForm({ ...vehicleForm, vin: e.target.value })} placeholder="Vehicle Identification Number" />
+          <Input label="Notes" as="textarea" value={vehicleForm.notes} onChange={e => setVehicleForm({ ...vehicleForm, notes: e.target.value })} placeholder="Any vehicle notes..." />
+          <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+            <button style={{ ...S.btnSecondary, flex: 1 }} onClick={() => setVehicleModal(null)}>Cancel</button>
+            <button style={{ ...S.btnPrimary, flex: 1 }} onClick={saveVehicle}>Save Vehicle</button>
           </div>
         </Modal>
       )}

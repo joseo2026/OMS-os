@@ -6,13 +6,13 @@ import Dashboard from "./components/Dashboard.jsx";
 import NewJob from "./components/NewJob.jsx";
 import JobHistory from "./components/JobHistory.jsx";
 import Customers from "./components/Customers.jsx";
-import Vehicles from "./components/Vehicles.jsx";
+
 import Expenses from "./components/Expenses.jsx";
 import Mileage from "./components/Mileage.jsx";
 import Appointments from "./components/Appointments.jsx";
 import Export from "./components/Export.jsx";
 
-const TABS = ["Dashboard", "New Job", "Jobs", "Customers", "Vehicles", "Expenses", "Mileage", "Appointments", "Export"];
+const TABS = ["Dashboard", "New Job", "Jobs", "Customers", "Expenses", "Mileage", "Appointments", "Export"];
 
 export default function App() {
   const [tab, setTab] = useState("Dashboard");
@@ -64,7 +64,6 @@ export default function App() {
         {tab === "New Job" && <NewJob data={data} setData={setData} onDone={() => setTab("Dashboard")} />}
         {tab === "Jobs" && <JobHistory data={data} setData={setData} />}
         {tab === "Customers" && <Customers data={data} setData={setData} />}
-        {tab === "Vehicles" && <Vehicles data={data} setData={setData} />}
         {tab === "Expenses" && <Expenses data={data} setData={setData} />}
         {tab === "Mileage" && <Mileage data={data} setData={setData} />}
         {tab === "Appointments" && <Appointments data={data} setData={setData} />}
