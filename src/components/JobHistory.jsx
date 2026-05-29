@@ -3,10 +3,27 @@ import { C, S } from "../styles.js";
 import { fmt } from "../helpers.js";
 import ShareButtons from "./ShareButtons.jsx";
 
-function JobReceipt({ j, onBack }) {
+function JobReceipt({ j, onBack, onDelete }) {
+  const [confirming, setConfirming] = useState(false);
+
+  function handleDelete() {
+    onDelete(j.id);
+  }
+
   return (
     <div>
-      <button style={{ ...S.btnSecondary, marginBottom: 16 }} className="no-print" onClick={onBack}>← Back to Jobs</button>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }} className="no-print">
+        <button style={S.btnSecondary} onClick={onBack}>← Back to Jobs</button>
+        {confirming ? (
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <span style={{ fontSize: 12, color: C.red }}>Delete this job?</span>
+            <button style={S.btnDanger} onClick={handleDelete}>Yes, delete</button>
+            <button style={S.btnSecondary} onClick={() => setConfirming(false)}>Cancel</button>
+          </div>
+        ) : (
+          <button style={S.btnDanger} onClick={() => setConfirming(true)}>Delete Job</button>
+        )}
+      </div>
       <div style={{ ...S.card, background: "#fff", color: "#111" }} className="print-area">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, paddingBottom: 14, borderBottom: "2px solid #3b82f6" }}>
           <div>
@@ -86,9 +103,10 @@ function JobReceipt({ j, onBack }) {
   );
 }
 
-export default function JobHistory({ data }) {
+export default function JobHistory({ data, setData }) {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   const jobs = [...(data.jobs || [])].sort((a, b) => b.date?.localeCompare(a.date));
   const filtered = jobs.filter(j =>
@@ -98,8 +116,18 @@ export default function JobHistory({ data }) {
     j.vehicleModel?.toLowerCase().includes(search.toLowerCase())
   );
 
+  function handleDelete(id) {
+    const updated = { ...data, jobs: (data.jobs || []).filter(j => j.id !== id) };
+    setData(updated);
+    const raw = JSON.parse(localStorage.getItem("oms-data-v1") || "{}");
+    raw.jobs = (raw.jobs || []).filter(j => j.id !== id);
+    localStorage.setItem("oms-data-v1", JSON.stringify(raw));
+    setSelected(null);
+    setDeletingId(null);
+  }
+
   if (selected) {
-    return <JobReceipt j={selected} onBack={() => setSelected(null)} />;
+    return <JobReceipt j={selected} onBack={() => setSelected(null)} onDelete={handleDelete} />;
   }
 
   return (
@@ -107,18 +135,27 @@ export default function JobHistory({ data }) {
       <input style={{ ...S.input, marginBottom: 14 }} placeholder="Search by customer, job #, vehicle..." value={search} onChange={e => setSearch(e.target.value)} />
       <div style={{ fontSize: 12, color: C.textSecondary, marginBottom: 12 }}>{filtered.length} jobs</div>
       {filtered.map(j => (
-        <div key={j.id} style={{ ...S.card, cursor: "pointer" }} onClick={() => setSelected(j)}>
+        <div key={j.id} style={{ ...S.card }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div>
+            <div style={{ cursor: "pointer", flex: 1 }} onClick={() => setSelected(j)}>
               <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{j.customerName}</div>
               <div style={{ fontSize: 12, color: C.textSecondary }}>{j.vehicleYear} {j.vehicleMake} {j.vehicleModel} · {j.mileage} mi</div>
               <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>{j.jobNumber} · {j.date}</div>
               <div style={{ fontSize: 11, color: C.textMuted }}>{j.lines?.map(l => l.service).join(", ")}</div>
             </div>
-            <div style={{ textAlign: "right" }}>
+            <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
               <div style={{ fontSize: 15, color: C.green, fontWeight: 700 }}>{fmt(j.grandTotal)}</div>
-              <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>{j.payMethod}</div>
-              <div style={{ fontSize: 11, color: C.accent, marginTop: 4 }}>View →</div>
+              <div style={{ fontSize: 11, color: C.textMuted }}>{j.payMethod}</div>
+              <div style={{ fontSize: 11, color: C.accent, cursor: "pointer" }} onClick={() => setSelected(j)}>View →</div>
+              {deletingId === j.id ? (
+                <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 2 }}>
+                  <span style={{ fontSize: 11, color: C.red }}>Delete?</span>
+                  <button style={{ ...S.btnDanger, padding: "3px 10px", fontSize: 11 }} onClick={() => handleDelete(j.id)}>Yes</button>
+                  <button style={{ ...S.btnSecondary, padding: "3px 10px", fontSize: 11 }} onClick={() => setDeletingId(null)}>No</button>
+                </div>
+              ) : (
+                <button style={{ ...S.btnDanger, padding: "3px 10px", fontSize: 11 }} onClick={() => setDeletingId(j.id)}>Delete</button>
+              )}
             </div>
           </div>
         </div>

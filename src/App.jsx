@@ -62,7 +62,7 @@ export default function App() {
       <div style={S.content}>
         {tab === "Dashboard" && <Dashboard data={data} />}
         {tab === "New Job" && <NewJob data={data} setData={setData} onDone={() => setTab("Dashboard")} />}
-        {tab === "Jobs" && <JobHistory data={data} />}
+        {tab === "Jobs" && <JobHistory data={data} setData={setData} />}
         {tab === "Customers" && <Customers data={data} setData={setData} />}
         {tab === "Vehicles" && <Vehicles data={data} setData={setData} />}
         {tab === "Expenses" && <Expenses data={data} setData={setData} />}
