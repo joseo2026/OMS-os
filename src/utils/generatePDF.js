@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 
-const ORANGE = [232, 99, 58];
+const ORANGE = [59, 130, 246];
 const BLACK = [17, 17, 17];
 const GRAY = [102, 102, 102];
 const LIGHT_GRAY = [153, 153, 153];

@@ -253,14 +253,14 @@ export default function Export({ data }) {
       </div>
 
       <div className="print-only" style={{ display: printMode ? "block" : "none", fontFamily: "'DM Mono', 'Courier New', monospace", color: "#111", padding: "32px 40px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #e8633a", paddingBottom: 16, marginBottom: 24 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #3b82f6", paddingBottom: 16, marginBottom: 24 }}>
           <div>
             <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "0.05em" }}>OCASIO</div>
             <div style={{ fontSize: 12, color: "#666", letterSpacing: "0.1em" }}>MECHANICAL SERVICES LLC</div>
             <div style={{ fontSize: 11, color: "#999" }}>Mobile Automotive Service · Florida</div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#e8633a", textTransform: "uppercase" }}>Tax Summary Report</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#3b82f6", textTransform: "uppercase" }}>Tax Summary Report</div>
             <div style={{ fontSize: 11, color: "#999", marginTop: 4 }}>{from} — {to}</div>
             <div style={{ fontSize: 11, color: "#999" }}>Generated: {new Date().toLocaleDateString()}</div>
           </div>
@@ -281,7 +281,7 @@ export default function Export({ data }) {
         </div>
 
         <div style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: 12, color: "#e8633a", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 12, fontWeight: 600 }}>Income & Tax Calculation</div>
+          <div style={{ fontSize: 12, color: "#3b82f6", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 12, fontWeight: 600 }}>Income & Tax Calculation</div>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
             <tbody>
               {[
@@ -303,7 +303,7 @@ export default function Export({ data }) {
         </div>
 
         <div style={{ background: "#f9f9f9", borderRadius: 6, padding: "16px 18px", marginBottom: 24 }}>
-          <div style={{ fontSize: 12, color: "#e8633a", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 12, fontWeight: 600 }}>Estimated Tax Liability</div>
+          <div style={{ fontSize: 12, color: "#3b82f6", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 12, fontWeight: 600 }}>Estimated Tax Liability</div>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
             <tbody>
               <tr style={{ borderBottom: "1px solid #e8e8e8" }}>
@@ -316,7 +316,7 @@ export default function Export({ data }) {
               </tr>
               <tr>
                 <td style={{ padding: "10px 0", fontWeight: 700, fontSize: 14 }}>Total Estimated Tax</td>
-                <td style={{ padding: "10px 0", textAlign: "right", fontWeight: 700, fontSize: 14, color: "#e8633a" }}>{fmt(totalTaxEst)}</td>
+                <td style={{ padding: "10px 0", textAlign: "right", fontWeight: 700, fontSize: 14, color: "#3b82f6" }}>{fmt(totalTaxEst)}</td>
               </tr>
             </tbody>
           </table>
@@ -327,7 +327,7 @@ export default function Export({ data }) {
 
         {jobs.length > 0 && (
           <div style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: 12, color: "#e8633a", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 12, fontWeight: 600 }}>Job Log ({jobs.length} jobs)</div>
+            <div style={{ fontSize: 12, color: "#3b82f6", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 12, fontWeight: 600 }}>Job Log ({jobs.length} jobs)</div>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
               <thead>
                 <tr style={{ borderBottom: "1px solid #ddd" }}>
@@ -340,7 +340,7 @@ export default function Export({ data }) {
                 {jobs.map(j => (
                   <tr key={j.id} style={{ borderBottom: "1px solid #f4f4f4" }}>
                     <td style={{ padding: "5px 0", color: "#555" }}>{j.date}</td>
-                    <td style={{ padding: "5px 0", color: "#e8633a", fontSize: 10 }}>{j.jobNumber}</td>
+                    <td style={{ padding: "5px 0", color: "#3b82f6", fontSize: 10 }}>{j.jobNumber}</td>
                     <td style={{ padding: "5px 0" }}>{j.customerName}</td>
                     <td style={{ padding: "5px 0", color: "#555" }}>{j.vehicleYear} {j.vehicleMake} {j.vehicleModel}</td>
                     <td style={{ padding: "5px 0", color: "#555", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{j.lines?.map(l => l.service).join(", ")}</td>
@@ -350,7 +350,7 @@ export default function Export({ data }) {
                 ))}
                 <tr style={{ borderTop: "2px solid #111" }}>
                   <td colSpan={5} style={{ padding: "8px 0", fontWeight: 700, textAlign: "right", paddingRight: 8 }}>TOTAL</td>
-                  <td style={{ padding: "8px 0", fontWeight: 700, textAlign: "right", color: "#e8633a" }}>{fmt(totalRevenue)}</td>
+                  <td style={{ padding: "8px 0", fontWeight: 700, textAlign: "right", color: "#3b82f6" }}>{fmt(totalRevenue)}</td>
                   <td />
                 </tr>
               </tbody>
@@ -360,7 +360,7 @@ export default function Export({ data }) {
 
         {expenses.length > 0 && (
           <div style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: 12, color: "#e8633a", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 12, fontWeight: 600 }}>Expense Log ({expenses.length} entries)</div>
+            <div style={{ fontSize: 12, color: "#3b82f6", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 12, fontWeight: 600 }}>Expense Log ({expenses.length} entries)</div>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
               <thead>
                 <tr style={{ borderBottom: "1px solid #ddd" }}>

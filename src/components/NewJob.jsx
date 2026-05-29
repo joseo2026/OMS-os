@@ -9,7 +9,7 @@ function Receipt({ job, onDone }) {
   return (
     <div>
       <div style={{ ...S.card, background: "#fff", color: "#111", fontFamily: "inherit" }} className="print-area">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, paddingBottom: 14, borderBottom: "2px solid #e8633a" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, paddingBottom: 14, borderBottom: "2px solid #3b82f6" }}>
           <div>
             <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: "0.05em" }}>OCASIO</div>
             <div style={{ fontSize: 11, color: "#666", letterSpacing: "0.1em" }}>MECHANICAL SERVICES LLC</div>
@@ -17,7 +17,7 @@ function Receipt({ job, onDone }) {
           </div>
           <div style={{ textAlign: "right" }}>
             <div style={{ fontSize: 10, color: "#999", textTransform: "uppercase" }}>Receipt</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#e8633a" }}>{job.jobNumber}</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#3b82f6" }}>{job.jobNumber}</div>
             <div style={{ fontSize: 10, color: "#999" }}>{job.date}</div>
           </div>
         </div>
@@ -60,12 +60,12 @@ function Receipt({ job, onDone }) {
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#666", marginBottom: 4 }}><span>Parts</span><span>{fmt(job.parts)}</span></div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#666", marginBottom: 8 }}><span>Tax (7% on parts)</span><span>{fmt(job.tax)}</span></div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, fontWeight: 700, borderTop: "2px solid #111", paddingTop: 8 }}>
-            <span>GRAND TOTAL</span><span style={{ color: "#e8633a" }}>{fmt(job.grandTotal)}</span>
+            <span>GRAND TOTAL</span><span style={{ color: "#3b82f6" }}>{fmt(job.grandTotal)}</span>
           </div>
           <div style={{ fontSize: 11, color: "#999", marginTop: 4 }}>Payment: {job.payMethod}</div>
         </div>
         {job.aiNotes && (
-          <div style={{ background: "#f9f9f9", borderLeft: "3px solid #e8633a", padding: "10px 12px", fontSize: 12, color: "#555", lineHeight: 1.6, marginBottom: 12, borderRadius: "0 6px 6px 0" }}>
+          <div style={{ background: "#f9f9f9", borderLeft: "3px solid #3b82f6", padding: "10px 12px", fontSize: 12, color: "#555", lineHeight: 1.6, marginBottom: 12, borderRadius: "0 6px 6px 0" }}>
             {job.aiNotes}
           </div>
         )}
@@ -78,7 +78,7 @@ function Receipt({ job, onDone }) {
         <div style={{ borderTop: "1px solid #eee", paddingTop: 12, textAlign: "center" }}>
           <div style={{ fontSize: 12, fontWeight: 700 }}>PAYMENT DUE UPON RECEIPT</div>
           <div style={{ fontSize: 11, color: "#999" }}>Make checks payable to: Ocasio Mechanical Services, LLC</div>
-          <div style={{ fontSize: 12, color: "#e8633a", marginTop: 6, fontWeight: 700 }}>Thank You For Your Business!</div>
+          <div style={{ fontSize: 12, color: "#3b82f6", marginTop: 6, fontWeight: 700 }}>Thank You For Your Business!</div>
         </div>
       </div>
       <ShareButtons job={job} />

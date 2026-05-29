@@ -8,13 +8,13 @@ function JobReceipt({ j, onBack }) {
     <div>
       <button style={{ ...S.btnSecondary, marginBottom: 16 }} className="no-print" onClick={onBack}>← Back to Jobs</button>
       <div style={{ ...S.card, background: "#fff", color: "#111" }} className="print-area">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, paddingBottom: 14, borderBottom: "2px solid #e8633a" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, paddingBottom: 14, borderBottom: "2px solid #3b82f6" }}>
           <div>
             <div style={{ fontSize: 20, fontWeight: 700 }}>OCASIO</div>
             <div style={{ fontSize: 11, color: "#666", letterSpacing: "0.1em" }}>MECHANICAL SERVICES LLC</div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#e8633a" }}>{j.jobNumber}</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#3b82f6" }}>{j.jobNumber}</div>
             <div style={{ fontSize: 10, color: "#999" }}>{j.date}</div>
           </div>
         </div>
@@ -57,12 +57,12 @@ function JobReceipt({ j, onBack }) {
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#666", marginBottom: 4 }}><span>Parts</span><span>{fmt(j.parts)}</span></div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#666", marginBottom: 8 }}><span>Tax</span><span>{fmt(j.tax)}</span></div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, fontWeight: 700, borderTop: "2px solid #111", paddingTop: 8 }}>
-            <span>GRAND TOTAL</span><span style={{ color: "#e8633a" }}>{fmt(j.grandTotal)}</span>
+            <span>GRAND TOTAL</span><span style={{ color: "#3b82f6" }}>{fmt(j.grandTotal)}</span>
           </div>
           <div style={{ fontSize: 11, color: "#999", marginTop: 4 }}>Payment: {j.payMethod}</div>
         </div>
         {j.aiNotes && (
-          <div style={{ background: "#f9f9f9", borderLeft: "3px solid #e8633a", padding: "10px 12px", fontSize: 12, color: "#555", lineHeight: 1.6, marginBottom: 12, borderRadius: "0 6px 6px 0" }}>
+          <div style={{ background: "#f9f9f9", borderLeft: "3px solid #3b82f6", padding: "10px 12px", fontSize: 12, color: "#555", lineHeight: 1.6, marginBottom: 12, borderRadius: "0 6px 6px 0" }}>
             {j.aiNotes}
           </div>
         )}
@@ -75,7 +75,7 @@ function JobReceipt({ j, onBack }) {
         <div style={{ borderTop: "1px solid #eee", paddingTop: 12, textAlign: "center" }}>
           <div style={{ fontSize: 12, fontWeight: 700 }}>PAYMENT DUE UPON RECEIPT</div>
           <div style={{ fontSize: 11, color: "#999" }}>Make checks payable to: Ocasio Mechanical Services, LLC</div>
-          <div style={{ fontSize: 12, color: "#e8633a", marginTop: 6, fontWeight: 700 }}>Thank You For Your Business!</div>
+          <div style={{ fontSize: 12, color: "#3b82f6", marginTop: 6, fontWeight: 700 }}>Thank You For Your Business!</div>
         </div>
       </div>
       <ShareButtons job={j} />
