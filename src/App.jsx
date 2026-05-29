@@ -10,8 +10,9 @@ import Vehicles from "./components/Vehicles.jsx";
 import Expenses from "./components/Expenses.jsx";
 import Mileage from "./components/Mileage.jsx";
 import Appointments from "./components/Appointments.jsx";
+import Export from "./components/Export.jsx";
 
-const TABS = ["Dashboard", "New Job", "Jobs", "Customers", "Vehicles", "Expenses", "Mileage", "Appointments"];
+const TABS = ["Dashboard", "New Job", "Jobs", "Customers", "Vehicles", "Expenses", "Mileage", "Appointments", "Export"];
 
 export default function App() {
   const [tab, setTab] = useState("Dashboard");
@@ -67,6 +68,7 @@ export default function App() {
         {tab === "Expenses" && <Expenses data={data} setData={setData} />}
         {tab === "Mileage" && <Mileage data={data} setData={setData} />}
         {tab === "Appointments" && <Appointments data={data} setData={setData} />}
+        {tab === "Export" && <Export data={data} />}
       </div>
     </div>
   );
