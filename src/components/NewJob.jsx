@@ -5,6 +5,11 @@ import { SERVICES, FL_TAX } from "../constants.js";
 import Input from "./Input.jsx";
 import ShareButtons from "./ShareButtons.jsx";
 
+function fmtMiles(val) {
+  const digits = String(val).replace(/\D/g, "");
+  return digits ? Number(digits).toLocaleString() : "";
+}
+
 function Receipt({ job, onDone }) {
   return (
     <div>
@@ -170,7 +175,7 @@ export default function NewJob({ data, setData, onDone }) {
 
     const jn = jobNum();
     const job = {
-      id: uid(), jobNumber: jn, date, mileage,
+      id: uid(), jobNumber: jn, date, mileage: mileage.replace(/,/g, ""),
       customerId: custObj?.id, customerName: custObj?.name, customerPhone: custObj?.phone,
       customerEmail: custObj?.email, customerAddress: custObj?.address,
       customerCity: custObj?.city, customerZip: custObj?.zip,
@@ -262,7 +267,7 @@ export default function NewJob({ data, setData, onDone }) {
               <Input label="Color" value={newVeh.color} onChange={e => setNewVeh({ ...newVeh, color: e.target.value })} placeholder="Silver" />
             </>
           )}
-          <Input label="Current Mileage" type="number" value={mileage} onChange={e => setMileage(e.target.value)} placeholder="e.g. 45000" />
+          <Input label="Current Mileage" type="text" inputMode="numeric" value={mileage} onChange={e => setMileage(fmtMiles(e.target.value))} placeholder="e.g. 45,000" />
           <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
             <button style={{ ...S.btnSecondary, flex: 1 }} onClick={() => setStep(0)}>← Back</button>
             <button style={{ ...S.btnPrimary, flex: 1 }} onClick={() => setStep(2)}>Next → Services</button>
@@ -286,8 +291,8 @@ export default function NewJob({ data, setData, onDone }) {
                 {SERVICES.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
               </Input>
               <div style={S.grid2}>
-                <Input label="Labor ($)" type="number" value={line.labor} onChange={e => updateLine(i, "labor", e.target.value)} />
-                <Input label="Parts ($)" type="number" value={line.parts} onChange={e => updateLine(i, "parts", e.target.value)} />
+                <Input label="Labor ($)" type="number" inputMode="decimal" value={line.labor} onChange={e => updateLine(i, "labor", e.target.value)} onFocus={e => e.target.select()} />
+                <Input label="Parts ($)" type="number" inputMode="decimal" value={line.parts} onChange={e => updateLine(i, "parts", e.target.value)} onFocus={e => e.target.select()} />
               </div>
             </div>
           ))}

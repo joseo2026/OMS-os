@@ -5,13 +5,19 @@ import { MILEAGE_RATE } from "../constants.js";
 import Input from "./Input.jsx";
 import Modal from "./Modal.jsx";
 
+function fmtMiles(val) {
+  const digits = String(val).replace(/\D/g, "");
+  return digits ? Number(digits).toLocaleString() : "";
+}
+
 export default function Mileage({ data, setData }) {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ date: today(), miles: "", purpose: "", from: "", to: "" });
 
   function save() {
     if (!form.miles || !form.purpose) return;
-    const updated = { ...data, mileage: [...(data.mileage || []), { ...form, id: uid() }] };
+    const rawMiles = form.miles.replace(/,/g, "");
+    const updated = { ...data, mileage: [...(data.mileage || []), { ...form, miles: rawMiles, id: uid() }] };
     setData(updated);
     saveData(updated);
     setForm({ date: today(), miles: "", purpose: "", from: "", to: "" });
@@ -25,23 +31,23 @@ export default function Mileage({ data, setData }) {
   }
 
   const entries = [...(data.mileage || [])].sort((a, b) => b.date?.localeCompare(a.date));
-  const totalMiles = entries.reduce((s, m) => s + Number(m.miles || 0), 0);
+  const totalMiles = entries.reduce((s, m) => s + Number(String(m.miles || 0).replace(/,/g, "")), 0);
   const deduction = totalMiles * MILEAGE_RATE;
 
   return (
     <div>
       <div style={S.sectionHead}>
         <div>
-          <div style={{ fontSize: 12, color: C.textSecondary }}>{entries.length} entries · {totalMiles} total miles</div>
-          <div style={{ fontSize: 16, fontWeight: 600, color: C.green, marginTop: 2 }}>{fmt(deduction)} deduction @ $0.67/mi</div>
+          <div style={{ fontSize: 12, color: C.textSecondary }}>{entries.length} entries · {totalMiles.toLocaleString()} total miles</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: C.green, marginTop: 2 }}>{fmt(deduction)} deduction @ ${MILEAGE_RATE.toFixed(2)}/mi</div>
         </div>
         <button style={S.btnPrimary} onClick={() => setShowModal(true)}>+ Log Miles</button>
       </div>
 
       <div style={{ ...S.card, marginBottom: 16 }}>
-        <div style={S.cardTitle}>IRS Standard Mileage Rate (2024)</div>
+        <div style={S.cardTitle}>IRS Standard Mileage Rate (2026)</div>
         <div style={{ fontSize: 12, color: C.textSecondary, lineHeight: 1.6 }}>
-          $0.67 per mile for business use. Keep this log for tax deductions. Your {totalMiles} miles
+          ${MILEAGE_RATE.toFixed(2)} per mile for business use. Keep this log for tax deductions. Your {totalMiles.toLocaleString()} miles
           equals a <span style={{ color: C.green, fontWeight: 600 }}>{fmt(deduction)}</span> tax deduction.
         </div>
       </div>
@@ -62,8 +68,8 @@ export default function Mileage({ data, setData }) {
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
               <div>
-                <div style={{ fontSize: 15, fontWeight: 600, textAlign: "right" }}>{m.miles} mi</div>
-                <div style={{ fontSize: 11, color: C.green, textAlign: "right" }}>{fmt(Number(m.miles) * MILEAGE_RATE)}</div>
+                <div style={{ fontSize: 15, fontWeight: 600, textAlign: "right" }}>{Number(m.miles).toLocaleString()} mi</div>
+                <div style={{ fontSize: 11, color: C.green, textAlign: "right" }}>{fmt(Number(String(m.miles).replace(/,/g, "")) * MILEAGE_RATE)}</div>
               </div>
               <button style={S.btnDanger} onClick={() => remove(m.id)}>Remove</button>
             </div>
@@ -76,7 +82,7 @@ export default function Mileage({ data, setData }) {
         <Modal title="Log Mileage" onClose={() => setShowModal(false)}>
           <div style={S.grid2}>
             <Input label="Date" type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
-            <Input label="Miles *" type="number" value={form.miles} onChange={e => setForm({ ...form, miles: e.target.value })} placeholder="0" />
+            <Input label="Miles *" type="text" inputMode="numeric" value={form.miles} onChange={e => setForm({ ...form, miles: fmtMiles(e.target.value) })} placeholder="0" />
           </div>
           <Input label="Purpose *" value={form.purpose} onChange={e => setForm({ ...form, purpose: e.target.value })} placeholder="e.g. Customer service call" />
           <div style={S.grid2}>
@@ -85,7 +91,7 @@ export default function Mileage({ data, setData }) {
           </div>
           {form.miles && (
             <div style={{ background: C.elevated, borderRadius: 6, padding: "10px 12px", marginBottom: 12, fontSize: 12, color: C.green }}>
-              Deduction: {fmt(Number(form.miles) * MILEAGE_RATE)} @ $0.67/mi
+              Deduction: {fmt(Number(form.miles.replace(/,/g, "")) * MILEAGE_RATE)} @ ${MILEAGE_RATE.toFixed(2)}/mi
             </div>
           )}
           <div style={{ display: "flex", gap: 10, marginTop: 8 }}>

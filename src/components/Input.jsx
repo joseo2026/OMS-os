@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { C, S } from "../styles.js";
 
-export default function Input({ label, as, children, ...props }) {
+export default function Input({ label, as, children, onFocus: extFocus, onBlur: extBlur, ...props }) {
   const [focused, setFocused] = useState(false);
   const borderColor = focused ? C.accent : C.border;
+
+  const handleFocus = (e) => { setFocused(true); extFocus?.(e); };
+  const handleBlur  = (e) => { setFocused(false); extBlur?.(e); };
 
   return (
     <div style={{ marginBottom: 12 }}>
@@ -12,8 +15,8 @@ export default function Input({ label, as, children, ...props }) {
         <select
           {...props}
           style={{ ...S.input, borderColor }}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
         >
           {children}
         </select>
@@ -21,15 +24,15 @@ export default function Input({ label, as, children, ...props }) {
         <textarea
           {...props}
           style={{ ...S.input, borderColor, resize: "vertical", minHeight: 70 }}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
         />
       ) : (
         <input
           {...props}
           style={{ ...S.input, borderColor }}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
         />
       )}
     </div>
