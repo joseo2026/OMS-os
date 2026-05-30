@@ -1,5 +1,11 @@
 import express from 'express';
 import Anthropic from '@anthropic-ai/sdk';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { existsSync } from 'fs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 app.use(express.json());
@@ -33,4 +39,14 @@ app.post('/api/ai-notes', async (req, res) => {
   }
 });
 
-app.listen(3001, () => console.log('API server running on port 3001'));
+// Serve built frontend in production
+const distPath = join(__dirname, 'dist');
+if (existsSync(distPath)) {
+  app.use(express.static(distPath));
+  app.get('*', (req, res) => {
+    res.sendFile(join(distPath, 'index.html'));
+  });
+}
+
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => console.log(`API server running on port ${PORT}`));

@@ -13,12 +13,15 @@ export default function Dashboard({ data }) {
   const totalIncome = jobs.reduce((s, j) => s + Number(j.grandTotal || 0), 0);
   const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
   const netProfit = totalIncome - totalExpenses;
-  const seTax = Math.max(0, netProfit) * SE_TAX_RATE;
-  const fedTax = Math.max(0, netProfit) * FED_TAX_RATE;
-  const totalTaxEstimate = seTax + fedTax;
-  const quarterlyEstimate = totalTaxEstimate / 4;
   const totalMiles = mileage.reduce((s, m) => s + Number(m.miles || 0), 0);
   const mileageDeduction = totalMiles * MILEAGE_RATE;
+  // IRS-correct SE tax: net profit × 92.35% × 15.3%
+  const seTax = Math.max(0, netProfit) * 0.9235 * SE_TAX_RATE;
+  // Federal income tax on taxable income (after mileage deduction + 50% SE tax deduction)
+  const taxableIncome = Math.max(0, netProfit - mileageDeduction - seTax * 0.5);
+  const fedTax = taxableIncome * FED_TAX_RATE;
+  const totalTaxEstimate = seTax + fedTax;
+  const quarterlyEstimate = totalTaxEstimate / 4;
 
   const recentJobs = [...jobs].sort((a, b) => b.date?.localeCompare(a.date)).slice(0, 5);
 
@@ -58,12 +61,12 @@ export default function Dashboard({ data }) {
           <span style={{ fontSize: 13, color: C.red }}>- {fmt(totalExpenses)}</span>
         </div>
         <div style={S.row}>
-          <span style={{ fontSize: 12, color: C.textSecondary }}>Mileage Deduction ({totalMiles} mi × $0.67)</span>
+          <span style={{ fontSize: 12, color: C.textSecondary }}>Mileage Deduction ({totalMiles} mi × ${MILEAGE_RATE.toFixed(2)})</span>
           <span style={{ fontSize: 13, color: C.red }}>- {fmt(mileageDeduction)}</span>
         </div>
         <div style={{ ...S.row, borderBottom: "none" }}>
           <span style={{ fontSize: 12, color: C.textSecondary }}>Net Taxable Income</span>
-          <span style={{ fontSize: 13, fontWeight: 600 }}>{fmt(Math.max(0, netProfit - mileageDeduction))}</span>
+          <span style={{ fontSize: 13, fontWeight: 600 }}>{fmt(taxableIncome)}</span>
         </div>
         <div style={{ background: C.elevated, borderRadius: 6, padding: "12px 14px", marginTop: 10 }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: C.textMuted, marginBottom: 6 }}>
