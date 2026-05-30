@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { C, S } from "../styles.js";
 import { uid, today, jobNum, fmt, saveData } from "../helpers.js";
-import { SERVICES, FL_TAX } from "../constants.js";
+import { SERVICES, FL_TAX, MILEAGE_RATE } from "../constants.js";
 import Input from "./Input.jsx";
 import ShareButtons from "./ShareButtons.jsx";
 
@@ -108,6 +108,7 @@ export default function NewJob({ data, setData, onDone }) {
   const [vehMode, setVehMode] = useState("existing");
   const [date, setDate] = useState(today());
   const [mileage, setMileage] = useState("");
+  const [travelMiles, setTravelMiles] = useState("");
   const [lines, setLines] = useState([{ service: SERVICES[0].name, labor: 100, parts: 50 }]);
   const [payMethod, setPayMethod] = useState("Cash");
   const [techNotes, setTechNotes] = useState("");
@@ -186,6 +187,20 @@ export default function NewJob({ data, setData, onDone }) {
     };
 
     updatedData = { ...updatedData, jobs: [...(updatedData.jobs || []), job] };
+
+    const rawTravel = travelMiles.replace(/,/g, "");
+    if (rawTravel && Number(rawTravel) > 0) {
+      const mileEntry = {
+        id: uid(),
+        date,
+        miles: rawTravel,
+        purpose: `Service call: ${custObj?.name || "customer"} — ${vehObj?.year || ""} ${vehObj?.make || ""} ${vehObj?.model || ""}`.trim(),
+        from: "",
+        to: custObj?.address ? `${custObj.address}${custObj.city ? ", " + custObj.city : ""}` : ""
+      };
+      updatedData = { ...updatedData, mileage: [...(updatedData.mileage || []), mileEntry] };
+    }
+
     setData(updatedData);
     saveData(updatedData);
     setInvoice(job);
@@ -301,6 +316,19 @@ export default function NewJob({ data, setData, onDone }) {
             + Add Service Line
           </button>
           <Input label="Tech Notes" as="textarea" value={techNotes} onChange={e => setTechNotes(e.target.value)} placeholder="Observations, recommendations..." />
+          <div style={{ background: C.elevated, borderRadius: 6, padding: "10px 14px", marginBottom: 12, borderLeft: `3px solid ${C.accent}` }}>
+            <div style={{ fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Internal — Not shown on receipt</div>
+            <Input label="Travel Miles (round trip or one-way)" type="text" inputMode="numeric" value={travelMiles} onChange={e => setTravelMiles(fmtMiles(e.target.value))} placeholder="e.g. 12" />
+            {travelMiles ? (
+              <div style={{ fontSize: 11, color: C.green, marginTop: -6, marginBottom: 4 }}>
+                Auto-logs {travelMiles} mi → {fmt(Number(travelMiles.replace(/,/g, "")) * MILEAGE_RATE)} mileage deduction
+              </div>
+            ) : (
+              <div style={{ fontSize: 11, color: C.textMuted, marginTop: -6, marginBottom: 4 }}>
+                Miles entered here auto-create a mileage log entry for this job.
+              </div>
+            )}
+          </div>
           <div style={{ marginBottom: 12 }}>
             <label style={S.label}>Payment Method</label>
             <div style={{ display: "flex", gap: 8 }}>
