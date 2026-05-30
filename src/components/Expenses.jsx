@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTheme } from "../theme.jsx";
-import { uid, today, fmt, saveData } from "../helpers.js";
+import { uid, today, fmt, saveData, deleteData } from "../helpers.js";
 import { EXPENSE_CATS } from "../constants.js";
 import Input from "./Input.jsx";
 import Modal from "./Modal.jsx";
@@ -11,19 +11,18 @@ export default function Expenses({ data, setData }) {
   const [filter, setFilter] = useState("All");
   const [form, setForm] = useState({ date: today(), category: EXPENSE_CATS[0], description: "", amount: "", vendor: "", receipt: "" });
 
-  function save() {
+  async function save() {
     if (!form.amount || !form.description) return;
-    const updated = { ...data, expenses: [...(data.expenses || []), { ...form, id: uid() }] };
-    setData(updated);
-    saveData(updated);
+    const newExpense = { ...form, id: uid(), created_at: today() };
+    await saveData('expenses', newExpense);
+    setData({ ...data, expenses: [...(data.expenses || []), newExpense] });
     setForm({ date: today(), category: EXPENSE_CATS[0], description: "", amount: "", vendor: "", receipt: "" });
     setShowModal(false);
   }
 
-  function remove(id) {
-    const updated = { ...data, expenses: data.expenses.filter(e => e.id !== id) };
-    setData(updated);
-    saveData(updated);
+  async function remove(id) {
+    await deleteData('expenses', id);
+    setData({ ...data, expenses: data.expenses.filter(e => e.id !== id) });
   }
 
   const expenses = [...(data.expenses || [])].sort((a, b) => b.date?.localeCompare(a.date));
