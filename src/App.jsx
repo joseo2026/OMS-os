@@ -10,20 +10,41 @@ import Expenses from "./components/Expenses.jsx";
 import Mileage from "./components/Mileage.jsx";
 import Appointments from "./components/Appointments.jsx";
 import Export from "./components/Export.jsx";
+import Settings from "./components/Settings.jsx";
 
-const TABS = ["Dashboard", "New Job", "Jobs", "Customers", "Expenses", "Mileage", "Appointments", "Export"];
+const ALL_TABS = ["Dashboard", "New Job", "Jobs", "Customers", "Expenses", "Mileage", "Appointments", "Export", "Settings"];
+const ALWAYS_VISIBLE = ["Dashboard", "Settings"];
+
+function loadTabVisibility() {
+  try {
+    const saved = localStorage.getItem("oms-tab-visibility");
+    return saved ? JSON.parse(saved) : {};
+  } catch {
+    return {};
+  }
+}
 
 function AppContent() {
-  const { C, S, isDark, toggleTheme } = useTheme();
+  const { C, S } = useTheme();
   const [tab, setTab] = useState("Dashboard");
   const [data, setData] = useState(defaultData);
   const [loading, setLoading] = useState(true);
+  const [tabVisibility, setTabVisibility] = useState(loadTabVisibility);
 
   useEffect(() => {
     const d = loadData();
     setData(d);
     setLoading(false);
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem("oms-tab-visibility", JSON.stringify(tabVisibility));
+    if (tabVisibility[tab] === false && !ALWAYS_VISIBLE.includes(tab)) {
+      setTab("Dashboard");
+    }
+  }, [tabVisibility]);
+
+  const visibleTabs = ALL_TABS.filter(t => ALWAYS_VISIBLE.includes(t) || tabVisibility[t] !== false);
 
   if (loading) {
     return (
@@ -43,27 +64,18 @@ function AppContent() {
           <div style={{ fontSize: 11, color: C.accent, letterSpacing: "0.2em", textTransform: "uppercase" }}>Ocasio Mechanical Services LLC</div>
           <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "0.05em" }}>Business OS</div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <button
-            onClick={toggleTheme}
-            title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-            style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 6, padding: "5px 11px", color: C.textSecondary, fontSize: 11, cursor: "pointer", fontFamily: "inherit", letterSpacing: "0.06em" }}
-          >
-            {isDark ? "Light Mode" : "Dark Mode"}
-          </button>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 10, color: C.textMuted }}>
-              {new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
-            </div>
-            <div style={{ fontSize: 11, color: C.textSecondary, marginTop: 2 }}>
-              {(data.jobs || []).length} jobs · {(data.customers || []).length} customers
-            </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 10, color: C.textMuted }}>
+            {new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+          </div>
+          <div style={{ fontSize: 11, color: C.textSecondary, marginTop: 2 }}>
+            {(data.jobs || []).length} jobs · {(data.customers || []).length} customers
           </div>
         </div>
       </div>
 
       <div style={S.nav} className="no-print">
-        {TABS.map(t => (
+        {visibleTabs.map(t => (
           <button key={t} style={S.navBtn(tab === t)} onClick={() => setTab(t)}>{t}</button>
         ))}
       </div>
@@ -77,6 +89,7 @@ function AppContent() {
         {tab === "Mileage"      && <Mileage data={data} setData={setData} />}
         {tab === "Appointments" && <Appointments data={data} setData={setData} />}
         {tab === "Export"       && <Export data={data} />}
+        {tab === "Settings"     && <Settings tabVisibility={tabVisibility} setTabVisibility={setTabVisibility} />}
       </div>
     </div>
   );
