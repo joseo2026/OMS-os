@@ -32,9 +32,10 @@ function AppContent() {
   const [tabVisibility, setTabVisibility] = useState(loadTabVisibility);
 
   useEffect(() => {
-    const d = loadData();
-    setData(d);
-    setLoading(false);
+    loadData().then(d => {
+      setData(d);
+      setLoading(false);
+    });
   }, []);
 
   useEffect(() => {
