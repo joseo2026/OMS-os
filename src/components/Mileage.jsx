@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { C, S } from "../styles.js";
+import { useTheme } from "../theme.jsx";
 import { uid, today, fmt, saveData } from "../helpers.js";
 import { MILEAGE_RATE } from "../constants.js";
 import Input from "./Input.jsx";
@@ -11,6 +11,7 @@ function fmtMiles(val) {
 }
 
 export default function Mileage({ data, setData }) {
+  const { C, S } = useTheme();
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ date: today(), miles: "", purpose: "", from: "", to: "" });
 

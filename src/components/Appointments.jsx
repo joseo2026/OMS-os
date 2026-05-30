@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { C, S } from "../styles.js";
+import { useTheme } from "../theme.jsx";
 import { uid, today, saveData } from "../helpers.js";
 import Input from "./Input.jsx";
 import Modal from "./Modal.jsx";
 
 export default function Appointments({ data, setData }) {
+  const { C, S } = useTheme();
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ date: today(), time: "", customerId: "", vehicleId: "", services: "", notes: "", status: "Scheduled" });
 

@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
-import { C, S } from "./styles.js";
+import { ThemeProvider, useTheme } from "./theme.jsx";
 import { loadData, saveData } from "./helpers.js";
 import { defaultData } from "./constants.js";
 import Dashboard from "./components/Dashboard.jsx";
 import NewJob from "./components/NewJob.jsx";
 import JobHistory from "./components/JobHistory.jsx";
 import Customers from "./components/Customers.jsx";
-
 import Expenses from "./components/Expenses.jsx";
 import Mileage from "./components/Mileage.jsx";
 import Appointments from "./components/Appointments.jsx";
@@ -14,7 +13,8 @@ import Export from "./components/Export.jsx";
 
 const TABS = ["Dashboard", "New Job", "Jobs", "Customers", "Expenses", "Mileage", "Appointments", "Export"];
 
-export default function App() {
+function AppContent() {
+  const { C, S, isDark, toggleTheme } = useTheme();
   const [tab, setTab] = useState("Dashboard");
   const [data, setData] = useState(defaultData);
   const [loading, setLoading] = useState(true);
@@ -43,12 +43,21 @@ export default function App() {
           <div style={{ fontSize: 11, color: C.accent, letterSpacing: "0.2em", textTransform: "uppercase" }}>Ocasio Mechanical Services LLC</div>
           <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "0.05em" }}>Business OS</div>
         </div>
-        <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: 10, color: C.textMuted }}>
-            {new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
-          </div>
-          <div style={{ fontSize: 11, color: C.textSecondary, marginTop: 2 }}>
-            {(data.jobs || []).length} jobs · {(data.customers || []).length} customers
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <button
+            onClick={toggleTheme}
+            title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 6, padding: "5px 11px", color: C.textSecondary, fontSize: 11, cursor: "pointer", fontFamily: "inherit", letterSpacing: "0.06em" }}
+          >
+            {isDark ? "Light Mode" : "Dark Mode"}
+          </button>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 10, color: C.textMuted }}>
+              {new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+            </div>
+            <div style={{ fontSize: 11, color: C.textSecondary, marginTop: 2 }}>
+              {(data.jobs || []).length} jobs · {(data.customers || []).length} customers
+            </div>
           </div>
         </div>
       </div>
@@ -60,15 +69,23 @@ export default function App() {
       </div>
 
       <div style={S.content}>
-        {tab === "Dashboard" && <Dashboard data={data} />}
-        {tab === "New Job" && <NewJob data={data} setData={setData} onDone={() => setTab("Dashboard")} />}
-        {tab === "Jobs" && <JobHistory data={data} setData={setData} />}
-        {tab === "Customers" && <Customers data={data} setData={setData} />}
-        {tab === "Expenses" && <Expenses data={data} setData={setData} />}
-        {tab === "Mileage" && <Mileage data={data} setData={setData} />}
+        {tab === "Dashboard"    && <Dashboard data={data} />}
+        {tab === "New Job"      && <NewJob data={data} setData={setData} onDone={() => setTab("Dashboard")} />}
+        {tab === "Jobs"         && <JobHistory data={data} setData={setData} />}
+        {tab === "Customers"    && <Customers data={data} setData={setData} />}
+        {tab === "Expenses"     && <Expenses data={data} setData={setData} />}
+        {tab === "Mileage"      && <Mileage data={data} setData={setData} />}
         {tab === "Appointments" && <Appointments data={data} setData={setData} />}
-        {tab === "Export" && <Export data={data} />}
+        {tab === "Export"       && <Export data={data} />}
       </div>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 }

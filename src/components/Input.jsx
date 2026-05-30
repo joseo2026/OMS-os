@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { C, S } from "../styles.js";
+import { useTheme } from "../theme.jsx";
 
 export default function Input({ label, as, children, onFocus: extFocus, onBlur: extBlur, ...props }) {
+  const { C, S } = useTheme();
   const [focused, setFocused] = useState(false);
   const borderColor = focused ? C.accent : C.border;
 

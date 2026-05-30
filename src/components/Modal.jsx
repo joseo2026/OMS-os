@@ -1,6 +1,7 @@
-import { C } from "../styles.js";
+import { useTheme } from "../theme.jsx";
 
 export default function Modal({ title, onClose, children }) {
+  const { C } = useTheme();
   return (
     <div style={{ position: "fixed", inset: 0, background: "#000a", zIndex: 100, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "40px 16px", overflowY: "auto" }}>
       <div style={{ background: C.surface, border: `1px solid ${C.borderLight}`, borderRadius: 10, width: "100%", maxWidth: 560, padding: 24 }}>

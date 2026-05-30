@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { C, S } from "../styles.js";
+import { useTheme } from "../theme.jsx";
 import { generateInvoicePDF } from "../utils/generatePDF.js";
 
 function getPDFFilename(job) {
@@ -21,6 +21,7 @@ function downloadBlob(blob, filename) {
 }
 
 export default function ShareButtons({ job }) {
+  const { C, S } = useTheme();
   const [emailLoading, setEmailLoading] = useState(false);
   const [smsLoading, setSmsLoading] = useState(false);
   const [status, setStatus] = useState(null);

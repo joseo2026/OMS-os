@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import * as XLSX from "xlsx";
-import { C, S } from "../styles.js";
+import { useTheme } from "../theme.jsx";
 import { fmt } from "../helpers.js";
 import { SE_TAX_RATE, FED_TAX_RATE, MILEAGE_RATE } from "../constants.js";
 
@@ -43,6 +43,7 @@ const PRESETS = [
 ];
 
 export default function Export({ data }) {
+  const { C, S } = useTheme();
   const [preset, setPreset] = useState("this_year");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo,   setCustomTo]   = useState("");

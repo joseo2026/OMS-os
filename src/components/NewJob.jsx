@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { C, S } from "../styles.js";
+import { useTheme } from "../theme.jsx";
 import { uid, today, jobNum, fmt, saveData } from "../helpers.js";
 import { SERVICES, FL_TAX, MILEAGE_RATE } from "../constants.js";
 import Input from "./Input.jsx";
@@ -11,6 +11,7 @@ function fmtMiles(val) {
 }
 
 function Receipt({ job, onDone }) {
+  const { C, S } = useTheme();
   return (
     <div>
       <div style={{ ...S.card, background: "#fff", color: "#111", fontFamily: "inherit" }} className="print-area">
@@ -99,6 +100,7 @@ function Receipt({ job, onDone }) {
 }
 
 export default function NewJob({ data, setData, onDone }) {
+  const { C, S } = useTheme();
   const [step, setStep] = useState(0);
   const [custMode, setCustMode] = useState("existing");
   const [selectedCustomer, setSelectedCustomer] = useState("");

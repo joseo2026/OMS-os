@@ -1,8 +1,9 @@
-import { C, S } from "../styles.js";
+import { useTheme } from "../theme.jsx";
 import { fmt } from "../helpers.js";
 import { SE_TAX_RATE, FED_TAX_RATE, QUARTERLY_DATES, MILEAGE_RATE } from "../constants.js";
 
 export default function Dashboard({ data }) {
+  const { C, S } = useTheme();
   const jobs = data.jobs || [];
   const expenses = data.expenses || [];
   const mileage = data.mileage || [];

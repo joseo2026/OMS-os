@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { C, S } from "../styles.js";
+import { useTheme } from "../theme.jsx";
 import { uid, today, fmt, saveData } from "../helpers.js";
 import { EXPENSE_CATS } from "../constants.js";
 import Input from "./Input.jsx";
 import Modal from "./Modal.jsx";
 
 export default function Expenses({ data, setData }) {
+  const { C, S } = useTheme();
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState("All");
   const [form, setForm] = useState({ date: today(), category: EXPENSE_CATS[0], description: "", amount: "", vendor: "", receipt: "" });

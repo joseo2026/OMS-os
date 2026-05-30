@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { C, S } from "../styles.js";
+import { useTheme } from "../theme.jsx";
 import { fmt } from "../helpers.js";
 import ShareButtons from "./ShareButtons.jsx";
 
 function JobReceipt({ j, onBack, onDelete }) {
+  const { C, S } = useTheme();
   const [confirming, setConfirming] = useState(false);
 
   function handleDelete() {
@@ -104,6 +105,7 @@ function JobReceipt({ j, onBack, onDelete }) {
 }
 
 export default function JobHistory({ data, setData }) {
+  const { C, S } = useTheme();
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState(null);
   const [deletingId, setDeletingId] = useState(null);

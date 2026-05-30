@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { C, S } from "../styles.js";
+import { useTheme } from "../theme.jsx";
 import { uid, today, saveData } from "../helpers.js";
 import Input from "./Input.jsx";
 import Modal from "./Modal.jsx";
@@ -9,6 +9,7 @@ const EMPTY_VEHICLE = { year: "", make: "", model: "", vin: "", color: "", notes
 const EMPTY_NEW_VEHICLE = { year: "", make: "", model: "", vin: "", color: "", notes: "" };
 
 export default function Customers({ data, setData }) {
+  const { C, S } = useTheme();
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [customerForm, setCustomerForm] = useState(EMPTY_CUSTOMER);
   const [newVehicleForm, setNewVehicleForm] = useState(EMPTY_NEW_VEHICLE);
