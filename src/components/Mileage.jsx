@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTheme } from "../theme.jsx";
-import { uid, today, fmt, saveData } from "../helpers.js";
+import { uid, today, fmt, saveData, deleteData } from "../helpers.js";
 import { MILEAGE_RATE } from "../constants.js";
 import Input from "./Input.jsx";
 import Modal from "./Modal.jsx";
@@ -15,20 +15,19 @@ export default function Mileage({ data, setData }) {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ date: today(), miles: "", purpose: "", from: "", to: "" });
 
-  function save() {
+  async function save() {
     if (!form.miles || !form.purpose) return;
     const rawMiles = form.miles.replace(/,/g, "");
-    const updated = { ...data, mileage: [...(data.mileage || []), { ...form, miles: rawMiles, id: uid() }] };
-    setData(updated);
-    saveData(updated);
+    const newEntry = { ...form, miles: rawMiles, id: uid(), created_at: today() };
+    await saveData('mileage', newEntry);
+    setData({ ...data, mileage: [...(data.mileage || []), newEntry] });
     setForm({ date: today(), miles: "", purpose: "", from: "", to: "" });
     setShowModal(false);
   }
 
-  function remove(id) {
-    const updated = { ...data, mileage: data.mileage.filter(m => m.id !== id) };
-    setData(updated);
-    saveData(updated);
+  async function remove(id) {
+    await deleteData('mileage', id);
+    setData({ ...data, mileage: data.mileage.filter(m => m.id !== id) });
   }
 
   const entries = [...(data.mileage || [])].sort((a, b) => b.date?.localeCompare(a.date));
