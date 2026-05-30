@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTheme } from "../theme.jsx";
-import { uid, today, saveData } from "../helpers.js";
+import { uid, today, saveData, deleteData } from "../helpers.js";
 import Input from "./Input.jsx";
 import Modal from "./Modal.jsx";
 
@@ -15,7 +15,7 @@ export default function Customers({ data, setData }) {
   const [newVehicleForm, setNewVehicleForm] = useState(EMPTY_NEW_VEHICLE);
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState(null);
-  const [vehicleModal, setVehicleModal] = useState(null); // customerId
+  const [vehicleModal, setVehicleModal] = useState(null);
   const [vehicleForm, setVehicleForm] = useState(EMPTY_VEHICLE);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [confirmDeleteVehicle, setConfirmDeleteVehicle] = useState(null);
@@ -29,50 +29,65 @@ export default function Customers({ data, setData }) {
     c.email?.toLowerCase().includes(search.toLowerCase())
   );
 
-  function saveCustomer() {
+  async function saveCustomer() {
     if (!customerForm.name.trim()) return;
     const customerId = uid();
-    const newCustomer = { ...customerForm, id: customerId, createdAt: today() };
+    const newCustomer = { ...customerForm, id: customerId, created_at: today() };
     const hasVehicle = newVehicleForm.year.trim() && newVehicleForm.make.trim() && newVehicleForm.model.trim();
-    const newVehicles = hasVehicle
-      ? [...(data.vehicles || []), { ...newVehicleForm, customerId, id: uid(), createdAt: today() }]
+    const newVehicle = hasVehicle
+      ? { ...newVehicleForm, customer_id: customerId, id: uid(), created_at: today() }
+      : null;
+
+    await saveData('customers', newCustomer);
+    if (newVehicle) await saveData('vehicles', newVehicle);
+
+    const updatedVehicles = newVehicle
+      ? [...(data.vehicles || []), newVehicle]
       : data.vehicles || [];
-    const updated = { ...data, customers: [...(data.customers || []), newCustomer], vehicles: newVehicles };
-    setData(updated);
-    saveData(updated);
+
+    setData({
+      ...data,
+      customers: [...(data.customers || []), newCustomer],
+      vehicles: updatedVehicles
+    });
     setCustomerForm(EMPTY_CUSTOMER);
     setNewVehicleForm(EMPTY_NEW_VEHICLE);
     setShowCustomerModal(false);
   }
 
-  function removeCustomer(id) {
-    const updated = {
+  async function removeCustomer(id) {
+    const custVehicles = (data.vehicles || []).filter(v => v.customer_id === id || v.customerId === id);
+    for (const v of custVehicles) {
+      await deleteData('vehicles', v.id);
+    }
+    await deleteData('customers', id);
+    setData({
       ...data,
       customers: data.customers.filter(c => c.id !== id),
-      vehicles: (data.vehicles || []).filter(v => v.customerId !== id),
-    };
-    setData(updated);
-    saveData(updated);
+      vehicles: (data.vehicles || []).filter(v => v.customer_id !== id && v.customerId !== id),
+    });
     setExpanded(null);
     setConfirmDelete(null);
   }
 
-  function saveVehicle() {
+  async function saveVehicle() {
     if (!vehicleForm.year || !vehicleForm.make || !vehicleForm.model) return;
-    const updated = {
+    const newVehicle = { ...vehicleForm, customer_id: vehicleModal, id: uid(), created_at: today() };
+    await saveData('vehicles', newVehicle);
+    setData({
       ...data,
-      vehicles: [...(data.vehicles || []), { ...vehicleForm, customerId: vehicleModal, id: uid(), createdAt: today() }],
-    };
-    setData(updated);
-    saveData(updated);
+      vehicles: [...(data.vehicles || []), newVehicle],
+    });
     setVehicleForm(EMPTY_VEHICLE);
     setVehicleModal(null);
   }
 
-  function removeVehicle(id) {
-    const updated = { ...data, vehicles: (data.vehicles || []).filter(v => v.id !== id) };
-    setData(updated);
-    saveData(updated);
+  async function removeVehicle(id) {
+    await deleteData('vehicles', id);
+    setData({
+      ...data,
+      vehicles: (data.vehicles || []).filter(v => v.id !== id)
+    });
     setConfirmDeleteVehicle(null);
   }
 
@@ -91,13 +106,12 @@ export default function Customers({ data, setData }) {
       />
 
       {filtered.map(c => {
-        const cvs = vehicles.filter(v => v.customerId === c.id);
-        const cJobs = jobs.filter(j => j.customerId === c.id || cvs.some(v => v.id === j.vehicleId));
+        const cvs = vehicles.filter(v => v.customer_id === c.id || v.customerId === c.id);
+        const cJobs = jobs.filter(j => j.customer_id === c.id || j.customerId === c.id || cvs.some(v => v.id === j.vehicleId || v.id === j.vehicle_id));
         const isOpen = expanded === c.id;
 
         return (
           <div key={c.id} style={{ ...S.card, padding: 0, overflow: "hidden" }}>
-            {/* Customer header row — click to expand */}
             <div
               style={{ padding: "14px 18px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
               onClick={() => setExpanded(isOpen ? null : c.id)}
@@ -120,11 +134,8 @@ export default function Customers({ data, setData }) {
               </div>
             </div>
 
-            {/* Expanded detail */}
             {isOpen && (
               <div style={{ borderTop: `1px solid ${C.border}`, padding: "14px 18px" }}>
-
-                {/* Vehicles section */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                   <div style={{ fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600 }}>Vehicles</div>
                   <button
@@ -140,7 +151,7 @@ export default function Customers({ data, setData }) {
                 )}
 
                 {cvs.map(v => {
-                  const vJobs = jobs.filter(j => j.vehicleId === v.id);
+                  const vJobs = jobs.filter(j => j.vehicle_id === v.id || j.vehicleId === v.id);
                   const lastJob = [...vJobs].sort((a, b) => b.date?.localeCompare(a.date))[0];
                   return (
                     <div key={v.id} style={{ background: C.elevated, borderRadius: 6, padding: "10px 14px", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -172,7 +183,6 @@ export default function Customers({ data, setData }) {
                   );
                 })}
 
-                {/* Customer actions */}
                 <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12, marginTop: 4, display: "flex", justifyContent: "flex-end" }}>
                   {confirmDelete === c.id ? (
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -194,7 +204,6 @@ export default function Customers({ data, setData }) {
         <div style={{ fontSize: 12, color: C.textMuted, padding: "20px 0" }}>No customers found</div>
       )}
 
-      {/* Add Customer modal */}
       {showCustomerModal && (
         <Modal title="New Customer" onClose={() => { setShowCustomerModal(false); setNewVehicleForm(EMPTY_NEW_VEHICLE); }}>
           <Input label="Full Name *" value={customerForm.name} onChange={e => setCustomerForm({ ...customerForm, name: e.target.value })} placeholder="Customer name" />
@@ -227,7 +236,6 @@ export default function Customers({ data, setData }) {
         </Modal>
       )}
 
-      {/* Add Vehicle modal */}
       {vehicleModal && (
         <Modal title="Add Vehicle" onClose={() => setVehicleModal(null)}>
           <div style={{ fontSize: 12, color: C.accent, marginBottom: 12, fontWeight: 500 }}>
