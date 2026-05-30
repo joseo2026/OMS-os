@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTheme } from "../theme.jsx";
-import { uid, today, saveData } from "../helpers.js";
+import { uid, today, saveData, deleteData } from "../helpers.js";
 import Input from "./Input.jsx";
 import Modal from "./Modal.jsx";
 
@@ -9,25 +9,25 @@ export default function Appointments({ data, setData }) {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ date: today(), time: "", customerId: "", vehicleId: "", services: "", notes: "", status: "Scheduled" });
 
-  function save() {
+  async function save() {
     if (!form.date || !form.customerId) return;
-    const updated = { ...data, appointments: [...(data.appointments || []), { ...form, id: uid() }] };
-    setData(updated);
-    saveData(updated);
+    const newAppt = { ...form, id: uid(), created_at: today() };
+    await saveData('appointments', newAppt);
+    setData({ ...data, appointments: [...(data.appointments || []), newAppt] });
     setForm({ date: today(), time: "", customerId: "", vehicleId: "", services: "", notes: "", status: "Scheduled" });
     setShowModal(false);
   }
 
-  function remove(id) {
-    const updated = { ...data, appointments: data.appointments.filter(a => a.id !== id) };
-    setData(updated);
-    saveData(updated);
+  async function remove(id) {
+    await deleteData('appointments', id);
+    setData({ ...data, appointments: data.appointments.filter(a => a.id !== id) });
   }
 
-  function updateStatus(id, status) {
-    const updated = { ...data, appointments: data.appointments.map(a => a.id === id ? { ...a, status } : a) };
-    setData(updated);
-    saveData(updated);
+  async function updateStatus(id, status) {
+    const appt = data.appointments.find(a => a.id === id);
+    if (!appt) return;
+    await saveData('appointments', { ...appt, status });
+    setData({ ...data, appointments: data.appointments.map(a => a.id === id ? { ...a, status } : a) });
   }
 
   const appts = [...(data.appointments || [])].sort((a, b) => a.date?.localeCompare(b.date));
@@ -35,13 +35,15 @@ export default function Appointments({ data, setData }) {
   const past = appts.filter(a => a.date < today() || a.status === "Cancelled");
   const customers = data.customers || [];
   const vehicles = data.vehicles || [];
-  const selectedCustVehicles = form.customerId ? vehicles.filter(v => v.customerId === form.customerId) : [];
+  const selectedCustVehicles = form.customerId
+    ? vehicles.filter(v => v.customer_id === form.customerId || v.customerId === form.customerId)
+    : [];
 
   const statusColor = { Scheduled: C.yellow, Confirmed: C.green, Completed: C.textMuted, Cancelled: C.red };
 
   function ApptCard({ a }) {
-    const cust = customers.find(c => c.id === a.customerId);
-    const veh = vehicles.find(v => v.id === a.vehicleId);
+    const cust = customers.find(c => c.id === a.customerId || c.id === a.customer_id);
+    const veh = vehicles.find(v => v.id === a.vehicleId || v.id === a.vehicle_id);
     return (
       <div style={S.card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
