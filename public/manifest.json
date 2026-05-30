@@ -1,0 +1,18 @@
+{
+  "name": "Ocasio Mechanical Services",
+  "short_name": "Ocasio Mech",
+  "description": "Business OS for Ocasio Mechanical Services LLC",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d0d0d",
+  "theme_color": "#0d0d0d",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
