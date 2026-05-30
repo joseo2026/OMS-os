@@ -119,7 +119,9 @@ export default function NewJob({ data, setData, onDone }) {
 
   const customers = data.customers || [];
   const vehicles = data.vehicles || [];
-  const custVehicles = selectedCustomer ? vehicles.filter(v => v.customerId === selectedCustomer) : [];
+  const custVehicles = selectedCustomer
+    ? vehicles.filter(v => v.customer_id === selectedCustomer || v.customerId === selectedCustomer)
+    : [];
 
   function updateLine(i, field, value) {
     const updated = [...lines];
@@ -142,18 +144,23 @@ export default function NewJob({ data, setData, onDone }) {
     let custObj = customers.find(c => c.id === selectedCustomer);
     let vehObj = vehicles.find(v => v.id === selectedVehicle);
 
-    let updatedData = { ...data };
+    // Save new customer if needed
     if (custMode === "new") {
-      const nc = { ...newCust, id: uid(), createdAt: today() };
-      updatedData = { ...updatedData, customers: [...(updatedData.customers || []), nc] };
+      const nc = { ...newCust, id: uid(), created_at: today() };
+      await saveData('customers', nc);
       custObj = nc;
-    }
-    if (vehMode === "new" || !vehObj) {
-      const nv = { ...newVeh, customerId: custObj?.id, id: uid(), createdAt: today() };
-      updatedData = { ...updatedData, vehicles: [...(updatedData.vehicles || []), nv] };
-      vehObj = nv;
+      setData(prev => ({ ...prev, customers: [...(prev.customers || []), nc] }));
     }
 
+    // Save new vehicle if needed
+    if (vehMode === "new" || !vehObj) {
+      const nv = { ...newVeh, customer_id: custObj?.id, id: uid(), created_at: today() };
+      await saveData('vehicles', nv);
+      vehObj = nv;
+      setData(prev => ({ ...prev, vehicles: [...(prev.vehicles || []), nv] }));
+    }
+
+    // Get AI notes
     let aiNotes = "Thank you for choosing Ocasio Mechanical Services. Your vehicle has been serviced with quality parts and professional care. We look forward to seeing you at your next scheduled maintenance.";
     try {
       const resp = await fetch("/api/ai-notes", {
@@ -176,20 +183,73 @@ export default function NewJob({ data, setData, onDone }) {
       console.warn("AI notes unavailable, using fallback");
     }
 
+    // Build job record
     const jn = jobNum();
     const job = {
-      id: uid(), jobNumber: jn, date, mileage: mileage.replace(/,/g, ""),
-      customerId: custObj?.id, customerName: custObj?.name, customerPhone: custObj?.phone,
-      customerEmail: custObj?.email, customerAddress: custObj?.address,
-      customerCity: custObj?.city, customerZip: custObj?.zip,
-      vehicleId: vehObj?.id, vehicleYear: vehObj?.year, vehicleMake: vehObj?.make,
-      vehicleModel: vehObj?.model, vehicleVin: vehObj?.vin,
-      lines, labor, parts, tax, grandTotal, payMethod, techNotes, aiNotes,
-      createdAt: new Date().toISOString()
+      id: uid(),
+      job_number: jn,
+      jobNumber: jn,
+      date,
+      mileage: mileage.replace(/,/g, ""),
+      customer_id: custObj?.id,
+      customerId: custObj?.id,
+      customerName: custObj?.name,
+      customerPhone: custObj?.phone,
+      customerEmail: custObj?.email,
+      customerAddress: custObj?.address,
+      customerCity: custObj?.city,
+      customerZip: custObj?.zip,
+      vehicle_id: vehObj?.id,
+      vehicleId: vehObj?.id,
+      vehicleYear: vehObj?.year,
+      vehicleMake: vehObj?.make,
+      vehicleModel: vehObj?.model,
+      vehicleVin: vehObj?.vin,
+      lines,
+      labor,
+      parts,
+      tax,
+      grand_total: grandTotal,
+      grandTotal,
+      pay_method: payMethod,
+      payMethod,
+      tech_notes: techNotes,
+      techNotes,
+      ai_notes: aiNotes,
+      aiNotes,
+      created_at: new Date().toISOString()
     };
 
-    updatedData = { ...updatedData, jobs: [...(updatedData.jobs || []), job] };
+    // Save job to Supabase
+    await saveData('jobs', {
+      id: job.id,
+      job_number: job.job_number,
+      date: job.date,
+      mileage: job.mileage,
+      customer_id: job.customer_id,
+      customer_name: job.customerName,
+      customer_phone: job.customerPhone,
+      customer_email: job.customerEmail,
+      customer_address: job.customerAddress,
+      customer_city: job.customerCity,
+      customer_zip: job.customerZip,
+      vehicle_id: job.vehicle_id,
+      vehicle_year: job.vehicleYear,
+      vehicle_make: job.vehicleMake,
+      vehicle_model: job.vehicleModel,
+      vehicle_vin: job.vehicleVin,
+      lines: job.lines,
+      labor: job.labor,
+      parts: job.parts,
+      tax: job.tax,
+      grand_total: job.grandTotal,
+      pay_method: job.payMethod,
+      tech_notes: job.techNotes,
+      ai_notes: job.aiNotes,
+      created_at: job.created_at
+    });
 
+    // Save mileage if entered
     const rawTravel = travelMiles.replace(/,/g, "");
     if (rawTravel && Number(rawTravel) > 0) {
       const mileEntry = {
@@ -198,13 +258,14 @@ export default function NewJob({ data, setData, onDone }) {
         miles: rawTravel,
         purpose: `Service call: ${custObj?.name || "customer"} — ${vehObj?.year || ""} ${vehObj?.make || ""} ${vehObj?.model || ""}`.trim(),
         from: "",
-        to: custObj?.address ? `${custObj.address}${custObj.city ? ", " + custObj.city : ""}` : ""
+        to: custObj?.address ? `${custObj.address}${custObj.city ? ", " + custObj.city : ""}` : "",
+        created_at: today()
       };
-      updatedData = { ...updatedData, mileage: [...(updatedData.mileage || []), mileEntry] };
+      await saveData('mileage', mileEntry);
+      setData(prev => ({ ...prev, mileage: [...(prev.mileage || []), mileEntry] }));
     }
 
-    setData(updatedData);
-    saveData(updatedData);
+    setData(prev => ({ ...prev, jobs: [...(prev.jobs || []), job] }));
     setInvoice(job);
     setGenerating(false);
     setStep(3);
