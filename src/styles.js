@@ -1,3 +1,6 @@
+Replace the entire styles.js with this:
+
+```javascript
 export const DARK = {
   bg: "#0d0d0d",
   surface: "#141414",
@@ -32,7 +35,7 @@ export function makeStyles(C) {
   return {
     app: { background: C.bg, minHeight: "100dvh", fontFamily: "'Roboto', 'Arial', sans-serif", color: C.textPrimary, paddingBottom: "env(safe-area-inset-bottom)", paddingLeft: "env(safe-area-inset-left)", paddingRight: "env(safe-area-inset-right)" },
     header: { position: "sticky", top: 0, zIndex: 100, background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 20px", paddingTop: "calc(env(safe-area-inset-top) + 4px)", display: "flex", justifyContent: "space-between", alignItems: "center" },
-    nav: { display: "flex", background: C.surface, borderBottom: `1px solid ${C.border}`, overflowX: "auto" },
+    nav: { position: "sticky", top: "calc(env(safe-area-inset-top) + 52px)", zIndex: 99, display: "flex", background: C.surface, borderBottom: `1px solid ${C.border}`, overflowX: "auto" },
     navBtn: (active) => ({ padding: "12px 16px", background: "none", border: "none", borderBottom: active ? `2px solid ${C.accent}` : "2px solid transparent", color: active ? C.accent : C.textSecondary, cursor: "pointer", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "inherit", whiteSpace: "nowrap", transition: "all 0.15s" }),
     content: { padding: "20px", maxWidth: 900, margin: "0 auto" },
     card: { background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: "16px 20px", marginBottom: 12 },
@@ -54,3 +57,8 @@ export function makeStyles(C) {
 }
 export const C = DARK;
 export const S = makeStyles(DARK);
+```
+
+---
+
+Commit, wait for Ready, delete and re-add home screen shortcut, tell me how it looks.
