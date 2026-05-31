@@ -1,9 +1,12 @@
 import { useTheme } from "../theme.jsx";
 import { fmt } from "../helpers.js";
-import { SE_TAX_RATE, FED_TAX_RATE, QUARTERLY_DATES, MILEAGE_RATE } from "../constants.js";
+import { QUARTERLY_DATES } from "../constants.js";
+import { getAppSettings } from "./Settings.jsx";
 
 export default function Dashboard({ data }) {
   const { C, S } = useTheme();
+  const { mileageRate: MILEAGE_RATE, seTaxRate: SE_TAX_RATE, fedTaxRate: FED_TAX_RATE } = getAppSettings();
+
   const jobs = data.jobs || [];
   const expenses = data.expenses || [];
   const mileage = data.mileage || [];
@@ -11,7 +14,6 @@ export default function Dashboard({ data }) {
   const thisMonth = new Date().toISOString().slice(0, 7);
   const monthJobs = jobs.filter(j => j.date?.startsWith(thisMonth));
 
-  // Handle both camelCase (local) and snake_case (Supabase) field names
   const getJobTotal = j => Number(j.grandTotal || j.grand_total || 0);
   const getJobNumber = j => j.jobNumber || j.job_number || "";
   const getCustomerName = j => j.customerName || j.customer_name || "";
@@ -69,7 +71,7 @@ export default function Dashboard({ data }) {
           <span style={{ fontSize: 13, color: C.red }}>- {fmt(totalExpenses)}</span>
         </div>
         <div style={S.row}>
-          <span style={{ fontSize: 12, color: C.textSecondary }}>Mileage Deduction ({totalMiles} mi × ${MILEAGE_RATE.toFixed(2)})</span>
+          <span style={{ fontSize: 12, color: C.textSecondary }}>Mileage Deduction ({totalMiles} mi × ${Number(MILEAGE_RATE).toFixed(3)})</span>
           <span style={{ fontSize: 13, color: C.red }}>- {fmt(mileageDeduction)}</span>
         </div>
         <div style={{ ...S.row, borderBottom: "none" }}>
@@ -78,13 +80,16 @@ export default function Dashboard({ data }) {
         </div>
         <div style={{ background: C.elevated, borderRadius: 6, padding: "12px 14px", marginTop: 10 }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: C.textMuted, marginBottom: 6 }}>
-            <span>Self-Employment Tax (15.3%)</span><span style={{ color: C.yellow }}>{fmt(seTax)}</span>
+            <span>Self-Employment Tax ({(SE_TAX_RATE * 100).toFixed(1)}%)</span>
+            <span style={{ color: C.yellow }}>{fmt(seTax)}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: C.textMuted, marginBottom: 10 }}>
-            <span>Federal Income Tax Est. (22%)</span><span style={{ color: C.yellow }}>{fmt(fedTax)}</span>
+            <span>Federal Income Tax Est. ({(FED_TAX_RATE * 100).toFixed(0)}%)</span>
+            <span style={{ color: C.yellow }}>{fmt(fedTax)}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 600, borderTop: `1px solid ${C.border}`, paddingTop: 8 }}>
-            <span>Quarterly Payment Est.</span><span style={{ color: C.yellow }}>{fmt(quarterlyEstimate)}</span>
+            <span>Quarterly Payment Est.</span>
+            <span style={{ color: C.yellow }}>{fmt(quarterlyEstimate)}</span>
           </div>
           <div style={{ fontSize: 10, color: C.textMuted, marginTop: 8 }}>
             Due: {QUARTERLY_DATES.map((d, i) => <span key={i} style={{ marginRight: 10 }}>Q{i + 1}: {d}</span>)}
