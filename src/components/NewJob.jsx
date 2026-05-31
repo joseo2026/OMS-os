@@ -160,25 +160,25 @@ export default function NewJob({ data, setData, onDone }) {
       setData(prev => ({ ...prev, vehicles: [...(prev.vehicles || []), nv] }));
     }
 
-    // Get AI notes
+    // Get AI notes — direct Claude API call
     let aiNotes = "Thank you for choosing Ocasio Mechanical Services. Your vehicle has been serviced with quality parts and professional care. We look forward to seeing you at your next scheduled maintenance.";
     try {
-      const resp = await fetch("/api/ai-notes", {
+      const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
-          customerName: custObj?.name,
-          vehicleYear: vehObj?.year,
-          vehicleMake: vehObj?.make,
-          vehicleModel: vehObj?.model,
-          mileage,
-          services: lines.map(l => l.service).join(", "),
-          techNotes,
-          grandTotal
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          messages: [{
+            role: "user",
+            content: `You are the service assistant for Ocasio Mechanical Services LLC, a professional mobile automotive service in Florida. Write a 2-sentence professional service summary for this receipt. Warm, confident, honest tone. Include a next service reminder. No greeting, just the note.\n\nCustomer: ${custObj?.name}\nVehicle: ${vehObj?.year} ${vehObj?.make} ${vehObj?.model} at ${mileage} miles\nServices: ${lines.map(l => l.service).join(", ")}\nTech notes: ${techNotes || "none"}\nTotal: $${grandTotal.toFixed(2)}`
+          }]
         })
       });
       const d = await resp.json();
-      aiNotes = d.notes || aiNotes;
+      aiNotes = d.content?.map(b => b.text || "").join("") || aiNotes;
     } catch (e) {
       console.warn("AI notes unavailable, using fallback");
     }
