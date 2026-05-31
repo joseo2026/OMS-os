@@ -11,7 +11,7 @@ import Mileage from "./components/Mileage.jsx";
 import Export from "./components/Export.jsx";
 import Settings from "./components/Settings.jsx";
 
-const ALL_TABS = ["Dashboard", "Records", "Expenses", "Export", "Settings"];
+const ALL_TABS = ["Dashboard", "Records", "Export", "Settings"];
 const ALWAYS_VISIBLE = ["Dashboard", "Settings"];
 
 function loadTabVisibility() {
@@ -29,8 +29,8 @@ function Records({ data, setData }) {
 
   return (
     <div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-        {["Customers", "Jobs", "Mileage"].map(t => (
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 20 }}>
+        {["Customers", "Jobs", "Expenses", "Mileage"].map(t => (
           <button
             key={t}
             onClick={() => setSubTab(t)}
@@ -56,6 +56,7 @@ function Records({ data, setData }) {
       </div>
       {subTab === "Customers" && <Customers data={data} setData={setData} />}
       {subTab === "Jobs"      && <JobHistory data={data} setData={setData} />}
+      {subTab === "Expenses"  && <Expenses data={data} setData={setData} />}
       {subTab === "Mileage"   && <Mileage data={data} setData={setData} />}
     </div>
   );
@@ -122,14 +123,12 @@ function AppContent() {
 
       <div style={{ ...S.content, paddingBottom: 100 }}>
         {tab === "Dashboard" && <Dashboard data={data} />}
-        {tab === "New Job" && <NewJob data={data} setData={setData} onDone={() => setTab("Dashboard")} />}
+        {tab === "New Job"   && <NewJob data={data} setData={setData} onDone={() => setTab("Dashboard")} />}
         {tab === "Records"   && <Records data={data} setData={setData} />}
-        {tab === "Expenses"  && <Expenses data={data} setData={setData} />}
         {tab === "Export"    && <Export data={data} />}
         {tab === "Settings"  && <Settings tabVisibility={tabVisibility} setTabVisibility={setTabVisibility} />}
       </div>
 
-      {/* Floating New Job Button — hidden when already on New Job tab */}
       {tab !== "New Job" && (
         <button
           className="no-print"
