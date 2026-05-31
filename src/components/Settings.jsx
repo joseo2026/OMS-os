@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useTheme } from "../theme.jsx";
-import { saveData } from "../helpers.js";
 
 const TOGGLEABLE_TABS = [
   { key: "New Job",      desc: "Job creation wizard" },
@@ -67,7 +66,7 @@ export default function Settings({ tabVisibility, setTabVisibility }) {
   const [seTaxRate, setSeTaxRate] = useState(saved?.seTaxRate ?? 0.153);
   const [fedTaxRate, setFedTaxRate] = useState(saved?.fedTaxRate ?? 0.22);
   const [flTax, setFlTax] = useState(saved?.flTax ?? 0.07);
-  const [saved2, setSaved2] = useState(false);
+  const [savedMsg, setSavedMsg] = useState(false);
 
   function toggleTab(key) {
     setTabVisibility(prev => ({ ...prev, [key]: !prev[key] }));
@@ -76,8 +75,8 @@ export default function Settings({ tabVisibility, setTabVisibility }) {
   function saveSettings() {
     const settings = { mileageRate, seTaxRate, fedTaxRate, flTax };
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-    setSaved2(true);
-    setTimeout(() => setSaved2(false), 2000);
+    setSavedMsg(true);
+    setTimeout(() => setSavedMsg(false), 2000);
   }
 
   const inputStyle = {
@@ -88,6 +87,7 @@ export default function Settings({ tabVisibility, setTabVisibility }) {
 
   return (
     <div>
+
       {/* Appearance */}
       <div style={S.card}>
         <div style={S.cardTitle}>Appearance</div>
@@ -110,6 +110,26 @@ export default function Settings({ tabVisibility, setTabVisibility }) {
             {isDark ? "Switch to Light" : "Switch to Dark"}
           </button>
         </div>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div style={S.card}>
+        <div style={S.cardTitle}>Navigation Tabs</div>
+        <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 14 }}>
+          Toggle tabs on or off to keep your navigation focused. Dashboard is always visible.
+        </div>
+        {TOGGLEABLE_TABS.map(({ key, desc }) => {
+          const isOn = tabVisibility[key] !== false;
+          return (
+            <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
+              <div>
+                <div style={{ fontSize: 13, color: isOn ? C.textPrimary : C.textMuted, fontWeight: isOn ? 500 : 400 }}>{key}</div>
+                <div style={{ fontSize: 11, color: C.textMuted }}>{desc}</div>
+              </div>
+              <Toggle on={isOn} onToggle={() => toggleTab(key)} />
+            </div>
+          );
+        })}
       </div>
 
       {/* Tax & Rates */}
@@ -148,32 +168,12 @@ export default function Settings({ tabVisibility, setTabVisibility }) {
           onClick={saveSettings}
           style={{ ...S.btnPrimary, width: "100%", marginTop: 16 }}
         >
-          {saved2 ? "✓ Saved" : "Save Rate Settings"}
+          {savedMsg ? "✓ Saved" : "Save Rate Settings"}
         </button>
 
         <div style={{ fontSize: 10, color: C.textMuted, marginTop: 10, textAlign: "center" }}>
           IRS announces new mileage rates each December at irs.gov
         </div>
-      </div>
-
-      {/* Navigation Tabs */}
-      <div style={S.card}>
-        <div style={S.cardTitle}>Navigation Tabs</div>
-        <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 14 }}>
-          Toggle tabs on or off to keep your navigation focused. Dashboard is always visible.
-        </div>
-        {TOGGLEABLE_TABS.map(({ key, desc }) => {
-          const isOn = tabVisibility[key] !== false;
-          return (
-            <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
-              <div>
-                <div style={{ fontSize: 13, color: isOn ? C.textPrimary : C.textMuted, fontWeight: isOn ? 500 : 400 }}>{key}</div>
-                <div style={{ fontSize: 11, color: C.textMuted }}>{desc}</div>
-              </div>
-              <Toggle on={isOn} onToggle={() => toggleTab(key)} />
-            </div>
-          );
-        })}
       </div>
 
       {/* About */}
@@ -190,6 +190,7 @@ export default function Settings({ tabVisibility, setTabVisibility }) {
           </div>
         </div>
       </div>
+
     </div>
   );
 }
