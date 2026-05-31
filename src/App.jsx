@@ -11,7 +11,7 @@ import Mileage from "./components/Mileage.jsx";
 import Export from "./components/Export.jsx";
 import Settings from "./components/Settings.jsx";
 
-const ALL_TABS = ["Dashboard", "Records", "Export", "Settings"];
+const ALL_TABS = ["Dashboard", "Records", "Reports", "Settings"];
 const ALWAYS_VISIBLE = ["Dashboard", "Settings"];
 
 function loadTabVisibility() {
@@ -125,7 +125,7 @@ function AppContent() {
         {tab === "Dashboard" && <Dashboard data={data} />}
         {tab === "New Job"   && <NewJob data={data} setData={setData} onDone={() => setTab("Dashboard")} />}
         {tab === "Records"   && <Records data={data} setData={setData} />}
-        {tab === "Export"    && <Export data={data} />}
+        {tab === "Reports"   && <Export data={data} />}
         {tab === "Settings"  && <Settings tabVisibility={tabVisibility} setTabVisibility={setTabVisibility} />}
       </div>
 
