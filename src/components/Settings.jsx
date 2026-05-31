@@ -3,7 +3,7 @@ import { useTheme } from "../theme.jsx";
 
 const TOGGLEABLE_TABS = [
   { key: "Records", desc: "Customers, jobs, expenses & mileage" },
-  { key: "Export",  desc: "Reports & Excel export" },
+  { key: "Reports", desc: "CPA reports & data export" },
 ];
 
 const SETTINGS_KEY = "oms-settings-v1";
