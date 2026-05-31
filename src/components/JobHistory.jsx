@@ -1,15 +1,11 @@
 import { useState } from "react";
 import { useTheme } from "../theme.jsx";
-import { fmt } from "../helpers.js";
+import { fmt, deleteData } from "../helpers.js";
 import ShareButtons from "./ShareButtons.jsx";
 
 function JobReceipt({ j, onBack, onDelete }) {
   const { C, S } = useTheme();
   const [confirming, setConfirming] = useState(false);
-
-  function handleDelete() {
-    onDelete(j.id);
-  }
 
   return (
     <div>
@@ -18,7 +14,7 @@ function JobReceipt({ j, onBack, onDelete }) {
         {confirming ? (
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <span style={{ fontSize: 12, color: C.red }}>Delete this job?</span>
-            <button style={S.btnDanger} onClick={handleDelete}>Yes, delete</button>
+            <button style={S.btnDanger} onClick={() => onDelete(j.id)}>Yes, delete</button>
             <button style={S.btnSecondary} onClick={() => setConfirming(false)}>Cancel</button>
           </div>
         ) : (
@@ -32,23 +28,23 @@ function JobReceipt({ j, onBack, onDelete }) {
             <div style={{ fontSize: 11, color: "#666", letterSpacing: "0.1em" }}>MECHANICAL SERVICES LLC</div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#3b82f6" }}>{j.jobNumber}</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#3b82f6" }}>{j.jobNumber || j.job_number}</div>
             <div style={{ fontSize: 10, color: "#999" }}>{j.date}</div>
           </div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
           <div>
             <div style={{ fontSize: 10, color: "#999", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Bill To</div>
-            <div style={{ fontWeight: 600 }}>{j.customerName}</div>
-            <div style={{ fontSize: 12, color: "#555" }}>{j.customerPhone}</div>
-            <div style={{ fontSize: 12, color: "#555" }}>{j.customerAddress}</div>
-            {j.customerCity && <div style={{ fontSize: 12, color: "#555" }}>{j.customerCity}, FL {j.customerZip}</div>}
+            <div style={{ fontWeight: 600 }}>{j.customerName || j.customer_name}</div>
+            <div style={{ fontSize: 12, color: "#555" }}>{j.customerPhone || j.customer_phone}</div>
+            <div style={{ fontSize: 12, color: "#555" }}>{j.customerAddress || j.customer_address}</div>
+            {(j.customerCity || j.customer_city) && <div style={{ fontSize: 12, color: "#555" }}>{j.customerCity || j.customer_city}, FL {j.customerZip || j.customer_zip}</div>}
           </div>
           <div>
             <div style={{ fontSize: 10, color: "#999", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Vehicle</div>
-            <div style={{ fontWeight: 600 }}>{j.vehicleYear} {j.vehicleMake} {j.vehicleModel}</div>
+            <div style={{ fontWeight: 600 }}>{j.vehicleYear || j.vehicle_year} {j.vehicleMake || j.vehicle_make} {j.vehicleModel || j.vehicle_model}</div>
             <div style={{ fontSize: 12, color: "#555" }}>Mileage: {j.mileage}</div>
-            {j.vehicleVin && <div style={{ fontSize: 11, color: "#999" }}>VIN: {j.vehicleVin}</div>}
+            {(j.vehicleVin || j.vehicle_vin) && <div style={{ fontSize: 11, color: "#999" }}>VIN: {j.vehicleVin || j.vehicle_vin}</div>}
           </div>
         </div>
         <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 12 }}>
@@ -75,19 +71,19 @@ function JobReceipt({ j, onBack, onDelete }) {
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#666", marginBottom: 4 }}><span>Parts</span><span>{fmt(j.parts)}</span></div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#666", marginBottom: 8 }}><span>Tax</span><span>{fmt(j.tax)}</span></div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, fontWeight: 700, borderTop: "2px solid #111", paddingTop: 8 }}>
-            <span>GRAND TOTAL</span><span style={{ color: "#3b82f6" }}>{fmt(j.grandTotal)}</span>
+            <span>GRAND TOTAL</span><span style={{ color: "#3b82f6" }}>{fmt(j.grandTotal || j.grand_total)}</span>
           </div>
-          <div style={{ fontSize: 11, color: "#999", marginTop: 4 }}>Payment: {j.payMethod}</div>
+          <div style={{ fontSize: 11, color: "#999", marginTop: 4 }}>Payment: {j.payMethod || j.pay_method}</div>
         </div>
-        {j.aiNotes && (
+        {(j.aiNotes || j.ai_notes) && (
           <div style={{ background: "#f9f9f9", borderLeft: "3px solid #3b82f6", padding: "10px 12px", fontSize: 12, color: "#555", lineHeight: 1.6, marginBottom: 12, borderRadius: "0 6px 6px 0" }}>
-            {j.aiNotes}
+            {j.aiNotes || j.ai_notes}
           </div>
         )}
-        {j.techNotes && (
+        {(j.techNotes || j.tech_notes) && (
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 10, color: "#999", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Technician Notes</div>
-            <div style={{ fontSize: 12, color: "#555" }}>{j.techNotes}</div>
+            <div style={{ fontSize: 12, color: "#555" }}>{j.techNotes || j.tech_notes}</div>
           </div>
         )}
         <div style={{ borderTop: "1px solid #eee", paddingTop: 12, textAlign: "center" }}>
@@ -112,18 +108,15 @@ export default function JobHistory({ data, setData }) {
 
   const jobs = [...(data.jobs || [])].sort((a, b) => b.date?.localeCompare(a.date));
   const filtered = jobs.filter(j =>
-    j.customerName?.toLowerCase().includes(search.toLowerCase()) ||
-    j.jobNumber?.includes(search) ||
-    j.vehicleMake?.toLowerCase().includes(search.toLowerCase()) ||
-    j.vehicleModel?.toLowerCase().includes(search.toLowerCase())
+    (j.customerName || j.customer_name)?.toLowerCase().includes(search.toLowerCase()) ||
+    (j.jobNumber || j.job_number)?.includes(search) ||
+    (j.vehicleMake || j.vehicle_make)?.toLowerCase().includes(search.toLowerCase()) ||
+    (j.vehicleModel || j.vehicle_model)?.toLowerCase().includes(search.toLowerCase())
   );
 
-  function handleDelete(id) {
-    const updated = { ...data, jobs: (data.jobs || []).filter(j => j.id !== id) };
-    setData(updated);
-    const raw = JSON.parse(localStorage.getItem("oms-data-v1") || "{}");
-    raw.jobs = (raw.jobs || []).filter(j => j.id !== id);
-    localStorage.setItem("oms-data-v1", JSON.stringify(raw));
+  async function handleDelete(id) {
+    await deleteData('jobs', id);
+    setData({ ...data, jobs: (data.jobs || []).filter(j => j.id !== id) });
     setSelected(null);
     setDeletingId(null);
   }
@@ -140,14 +133,14 @@ export default function JobHistory({ data, setData }) {
         <div key={j.id} style={{ ...S.card }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div style={{ cursor: "pointer", flex: 1 }} onClick={() => setSelected(j)}>
-              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{j.customerName}</div>
-              <div style={{ fontSize: 12, color: C.textSecondary }}>{j.vehicleYear} {j.vehicleMake} {j.vehicleModel} · {j.mileage} mi</div>
-              <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>{j.jobNumber} · {j.date}</div>
+              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{j.customerName || j.customer_name}</div>
+              <div style={{ fontSize: 12, color: C.textSecondary }}>{j.vehicleYear || j.vehicle_year} {j.vehicleMake || j.vehicle_make} {j.vehicleModel || j.vehicle_model} · {j.mileage} mi</div>
+              <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>{j.jobNumber || j.job_number} · {j.date}</div>
               <div style={{ fontSize: 11, color: C.textMuted }}>{j.lines?.map(l => l.service).join(", ")}</div>
             </div>
             <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
-              <div style={{ fontSize: 15, color: C.green, fontWeight: 700 }}>{fmt(j.grandTotal)}</div>
-              <div style={{ fontSize: 11, color: C.textMuted }}>{j.payMethod}</div>
+              <div style={{ fontSize: 15, color: C.green, fontWeight: 700 }}>{fmt(j.grandTotal || j.grand_total)}</div>
+              <div style={{ fontSize: 11, color: C.textMuted }}>{j.payMethod || j.pay_method}</div>
               <div style={{ fontSize: 11, color: C.accent, cursor: "pointer" }} onClick={() => setSelected(j)}>View →</div>
               {deletingId === j.id ? (
                 <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 2 }}>
