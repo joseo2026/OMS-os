@@ -1,6 +1,6 @@
-Replace the entire styles.js with this:
 
-```javascript
+
+
 export const DARK = {
   bg: "#0d0d0d",
   surface: "#141414",
