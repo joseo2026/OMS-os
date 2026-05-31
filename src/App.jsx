@@ -8,11 +8,10 @@ import JobHistory from "./components/JobHistory.jsx";
 import Customers from "./components/Customers.jsx";
 import Expenses from "./components/Expenses.jsx";
 import Mileage from "./components/Mileage.jsx";
-import Appointments from "./components/Appointments.jsx";
 import Export from "./components/Export.jsx";
 import Settings from "./components/Settings.jsx";
 
-const ALL_TABS = ["Dashboard", "New Job", "Records", "Expenses", "Appointments", "Export", "Settings"];
+const ALL_TABS = ["Dashboard", "New Job", "Records", "Expenses", "Export", "Settings"];
 const ALWAYS_VISIBLE = ["Dashboard", "Settings"];
 
 function loadTabVisibility() {
@@ -122,13 +121,12 @@ function AppContent() {
       </div>
 
       <div style={S.content}>
-        {tab === "Dashboard"    && <Dashboard data={data} />}
-        {tab === "New Job"      && <NewJob data={data} setData={setData} onDone={() => setTab("Dashboard")} />}
-        {tab === "Records"      && <Records data={data} setData={setData} />}
-        {tab === "Expenses"     && <Expenses data={data} setData={setData} />}
-        {tab === "Appointments" && <Appointments data={data} setData={setData} />}
-        {tab === "Export"       && <Export data={data} />}
-        {tab === "Settings"     && <Settings tabVisibility={tabVisibility} setTabVisibility={setTabVisibility} />}
+        {tab === "Dashboard" && <Dashboard data={data} />}
+        {tab === "New Job"   && <NewJob data={data} setData={setData} onDone={() => setTab("Dashboard")} />}
+        {tab === "Records"   && <Records data={data} setData={setData} />}
+        {tab === "Expenses"  && <Expenses data={data} setData={setData} />}
+        {tab === "Export"    && <Export data={data} />}
+        {tab === "Settings"  && <Settings tabVisibility={tabVisibility} setTabVisibility={setTabVisibility} />}
       </div>
     </div>
   );
