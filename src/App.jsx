@@ -12,7 +12,7 @@ import Appointments from "./components/Appointments.jsx";
 import Export from "./components/Export.jsx";
 import Settings from "./components/Settings.jsx";
 
-const ALL_TABS = ["Dashboard", "New Job", "Records", "Customers", "Expenses", "Appointments", "Export", "Settings"];
+const ALL_TABS = ["Dashboard", "New Job", "Records", "Expenses", "Appointments", "Export", "Settings"];
 const ALWAYS_VISIBLE = ["Dashboard", "Settings"];
 
 function loadTabVisibility() {
@@ -25,23 +25,23 @@ function loadTabVisibility() {
 }
 
 function Records({ data, setData }) {
-  const { C, S } = useTheme();
-  const [subTab, setSubTab] = useState("Jobs");
+  const { C } = useTheme();
+  const [subTab, setSubTab] = useState("Customers");
 
   return (
     <div>
       <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-        {["Jobs", "Mileage"].map(t => (
+        {["Customers", "Jobs", "Mileage"].map(t => (
           <button
             key={t}
             onClick={() => setSubTab(t)}
             style={{
               flex: 1,
               padding: "10px",
-              background: subTab === t ? C.accent : C.elevated,
-              border: `1px solid ${subTab === t ? C.accent : C.border}`,
+              background: subTab === t ? "#3b82f6" : "#1e1e1e",
+              border: `1px solid ${subTab === t ? "#3b82f6" : "#2a2a2a"}`,
               borderRadius: 6,
-              color: subTab === t ? "#fff" : C.textSecondary,
+              color: subTab === t ? "#fff" : "#8a8a8a",
               fontSize: 12,
               fontWeight: subTab === t ? 600 : 400,
               cursor: "pointer",
@@ -55,8 +55,9 @@ function Records({ data, setData }) {
           </button>
         ))}
       </div>
-      {subTab === "Jobs" && <JobHistory data={data} setData={setData} />}
-      {subTab === "Mileage" && <Mileage data={data} setData={setData} />}
+      {subTab === "Customers" && <Customers data={data} setData={setData} />}
+      {subTab === "Jobs"      && <JobHistory data={data} setData={setData} />}
+      {subTab === "Mileage"   && <Mileage data={data} setData={setData} />}
     </div>
   );
 }
@@ -124,7 +125,6 @@ function AppContent() {
         {tab === "Dashboard"    && <Dashboard data={data} />}
         {tab === "New Job"      && <NewJob data={data} setData={setData} onDone={() => setTab("Dashboard")} />}
         {tab === "Records"      && <Records data={data} setData={setData} />}
-        {tab === "Customers"    && <Customers data={data} setData={setData} />}
         {tab === "Expenses"     && <Expenses data={data} setData={setData} />}
         {tab === "Appointments" && <Appointments data={data} setData={setData} />}
         {tab === "Export"       && <Export data={data} />}
