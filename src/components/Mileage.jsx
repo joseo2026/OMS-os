@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTheme } from "../theme.jsx";
 import { uid, today, fmt, saveData, deleteData } from "../helpers.js";
-import { MILEAGE_RATE } from "../constants.js";
+import { getAppSettings } from "./Settings.jsx";
 import Input from "./Input.jsx";
 import Modal from "./Modal.jsx";
 
@@ -12,6 +12,7 @@ function fmtMiles(val) {
 
 export default function Mileage({ data, setData }) {
   const { C, S } = useTheme();
+  const { mileageRate: MILEAGE_RATE } = getAppSettings();
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ date: today(), miles: "", purpose: "", from: "", to: "" });
 
@@ -39,7 +40,7 @@ export default function Mileage({ data, setData }) {
       <div style={S.sectionHead}>
         <div>
           <div style={{ fontSize: 12, color: C.textSecondary }}>{entries.length} entries · {totalMiles.toLocaleString()} total miles</div>
-          <div style={{ fontSize: 16, fontWeight: 600, color: C.green, marginTop: 2 }}>{fmt(deduction)} deduction @ ${MILEAGE_RATE.toFixed(2)}/mi</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: C.green, marginTop: 2 }}>{fmt(deduction)} deduction @ ${Number(MILEAGE_RATE).toFixed(3)}/mi</div>
         </div>
         <button style={S.btnPrimary} onClick={() => setShowModal(true)}>+ Log Miles</button>
       </div>
@@ -47,7 +48,7 @@ export default function Mileage({ data, setData }) {
       <div style={{ ...S.card, marginBottom: 16 }}>
         <div style={S.cardTitle}>IRS Standard Mileage Rate (2026)</div>
         <div style={{ fontSize: 12, color: C.textSecondary, lineHeight: 1.6 }}>
-          ${MILEAGE_RATE.toFixed(2)} per mile for business use. Keep this log for tax deductions. Your {totalMiles.toLocaleString()} miles
+          ${Number(MILEAGE_RATE).toFixed(3)} per mile for business use. Keep this log for tax deductions. Your {totalMiles.toLocaleString()} miles
           equals a <span style={{ color: C.green, fontWeight: 600 }}>{fmt(deduction)}</span> tax deduction.
         </div>
       </div>
@@ -91,7 +92,7 @@ export default function Mileage({ data, setData }) {
           </div>
           {form.miles && (
             <div style={{ background: C.elevated, borderRadius: 6, padding: "10px 12px", marginBottom: 12, fontSize: 12, color: C.green }}>
-              Deduction: {fmt(Number(form.miles.replace(/,/g, "")) * MILEAGE_RATE)} @ ${MILEAGE_RATE.toFixed(2)}/mi
+              Deduction: {fmt(Number(form.miles.replace(/,/g, "")) * MILEAGE_RATE)} @ ${Number(MILEAGE_RATE).toFixed(3)}/mi
             </div>
           )}
           <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
