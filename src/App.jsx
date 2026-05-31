@@ -60,25 +60,27 @@ function AppContent() {
 
   return (
     <div style={S.app}>
-      <div style={S.header} className="no-print">
-        <div>
-          <div style={{ fontSize: 11, color: C.accent, letterSpacing: "0.2em", textTransform: "uppercase" }}>Ocasio Mechanical Services LLC</div>
-          <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "0.05em" }}>Business OS</div>
-        </div>
-        <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: 10, color: C.textMuted }}>
-            {new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+      <div style={{ position: "sticky", top: 0, zIndex: 100 }}>
+        <div style={S.header} className="no-print">
+          <div>
+            <div style={{ fontSize: 11, color: C.accent, letterSpacing: "0.2em", textTransform: "uppercase" }}>Ocasio Mechanical Services LLC</div>
+            <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "0.05em" }}>Business OS</div>
           </div>
-          <div style={{ fontSize: 11, color: C.textSecondary, marginTop: 2 }}>
-            {(data.jobs || []).length} jobs · {(data.customers || []).length} customers
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 10, color: C.textMuted }}>
+              {new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+            </div>
+            <div style={{ fontSize: 11, color: C.textSecondary, marginTop: 2 }}>
+              {(data.jobs || []).length} jobs · {(data.customers || []).length} customers
+            </div>
           </div>
         </div>
-      </div>
 
-      <div style={S.nav} className="no-print">
-        {visibleTabs.map(t => (
-          <button key={t} style={S.navBtn(tab === t)} onClick={() => setTab(t)}>{t}</button>
-        ))}
+        <div style={S.nav} className="no-print">
+          {visibleTabs.map(t => (
+            <button key={t} style={S.navBtn(tab === t)} onClick={() => setTab(t)}>{t}</button>
+          ))}
+        </div>
       </div>
 
       <div style={S.content}>
