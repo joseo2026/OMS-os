@@ -30,7 +30,7 @@ function Records({ data, setData }) {
   return (
     <div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 20 }}>
-        {["Customers", "Jobs", "Expenses", "Mileage"].map(t => (
+        {["Customers", "Expenses", "Jobs", "Mileage"].map(t => (
           <button
             key={t}
             onClick={() => setSubTab(t)}
@@ -55,8 +55,8 @@ function Records({ data, setData }) {
         ))}
       </div>
       {subTab === "Customers" && <Customers data={data} setData={setData} />}
-      {subTab === "Jobs"      && <JobHistory data={data} setData={setData} />}
       {subTab === "Expenses"  && <Expenses data={data} setData={setData} />}
+      {subTab === "Jobs"      && <JobHistory data={data} setData={setData} />}
       {subTab === "Mileage"   && <Mileage data={data} setData={setData} />}
     </div>
   );
