@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useTheme } from "../theme.jsx";
 
 const TOGGLEABLE_TABS = [
-  { key: "New Job",  desc: "Job creation wizard" },
   { key: "Records",  desc: "Customers, job history & mileage log" },
   { key: "Expenses", desc: "Expense tracking" },
   { key: "Export",   desc: "Reports & Excel export" },
