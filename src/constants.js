@@ -1,7 +1,7 @@
 export const EXPENSE_CATS = [
-  "Parts & Materials", "Tools & Equipment", "Fuel", "Marketing",
-  "Administrative", "Insurance", "Technology", "Vehicle Maintenance",
-  "Legal & Accounting", "Miscellaneous"
+  "Administrative", "Fuel", "Insurance", "Legal & Accounting",
+  "Marketing", "Miscellaneous", "Parts & Materials", "Technology",
+  "Tools & Equipment", "Vehicle Maintenance"
 ];
 
 export const SERVICES = [
