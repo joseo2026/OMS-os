@@ -31,7 +31,7 @@ export const LIGHT = {
 export function makeStyles(C) {
   return {
     app: { background: C.bg, minHeight: "100dvh", fontFamily: "'Roboto', 'Arial', sans-serif", color: C.textPrimary, paddingBottom: "env(safe-area-inset-bottom)", paddingLeft: "env(safe-area-inset-left)", paddingRight: "env(safe-area-inset-right)" },
-    header: { background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 20px", paddingTop: "calc(env(safe-area-inset-top) + 4px)", display: "flex", justifyContent: "space-between", alignItems: "center" },
+    header: { background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 20px", paddingTop: "calc(env(safe-area-inset-top) + 2px)", display: "flex", justifyContent: "space-between", alignItems: "center" },
     nav: { display: "flex", background: C.surface, borderBottom: `1px solid ${C.border}`, overflowX: "auto" },
     navBtn: (active) => ({ padding: "12px 16px", background: "none", border: "none", borderBottom: active ? `2px solid ${C.accent}` : "2px solid transparent", color: active ? C.accent : C.textSecondary, cursor: "pointer", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "inherit", whiteSpace: "nowrap", transition: "all 0.15s" }),
     content: { padding: "20px", maxWidth: 900, margin: "0 auto" },
