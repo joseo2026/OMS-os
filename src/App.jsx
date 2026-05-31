@@ -120,7 +120,7 @@ function AppContent() {
         </div>
       </div>
 
-      <div style={S.content}>
+      <div style={{ ...S.content, paddingBottom: 100 }}>
         {tab === "Dashboard" && <Dashboard data={data} />}
         {tab === "New Job"   && <NewJob data={data} setData={setData} onDone={() => setTab("Dashboard")} />}
         {tab === "Records"   && <Records data={data} setData={setData} />}
@@ -128,6 +128,38 @@ function AppContent() {
         {tab === "Export"    && <Export data={data} />}
         {tab === "Settings"  && <Settings tabVisibility={tabVisibility} setTabVisibility={setTabVisibility} />}
       </div>
+
+      {/* Floating New Job Button — hidden when already on New Job tab */}
+      {tab !== "New Job" && (
+        <button
+          className="no-print"
+          onClick={() => setTab("New Job")}
+          style={{
+            position: "fixed",
+            bottom: `calc(24px + env(safe-area-inset-bottom))`,
+            right: 24,
+            zIndex: 200,
+            width: 60,
+            height: 60,
+            borderRadius: "50%",
+            background: C.accent,
+            border: "none",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 4px 16px rgba(59,130,246,0.4)",
+            transition: "transform 0.15s, box-shadow 0.15s",
+          }}
+          onMouseEnter={e => e.currentTarget.style.transform = "scale(1.08)"}
+          onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+        >
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
