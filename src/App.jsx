@@ -12,7 +12,7 @@ import Appointments from "./components/Appointments.jsx";
 import Export from "./components/Export.jsx";
 import Settings from "./components/Settings.jsx";
 
-const ALL_TABS = ["Dashboard", "New Job", "Jobs", "Customers", "Expenses", "Mileage", "Appointments", "Export", "Settings"];
+const ALL_TABS = ["Dashboard", "New Job", "Records", "Customers", "Expenses", "Appointments", "Export", "Settings"];
 const ALWAYS_VISIBLE = ["Dashboard", "Settings"];
 
 function loadTabVisibility() {
@@ -22,6 +22,43 @@ function loadTabVisibility() {
   } catch {
     return {};
   }
+}
+
+function Records({ data, setData }) {
+  const { C, S } = useTheme();
+  const [subTab, setSubTab] = useState("Jobs");
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+        {["Jobs", "Mileage"].map(t => (
+          <button
+            key={t}
+            onClick={() => setSubTab(t)}
+            style={{
+              flex: 1,
+              padding: "10px",
+              background: subTab === t ? C.accent : C.elevated,
+              border: `1px solid ${subTab === t ? C.accent : C.border}`,
+              borderRadius: 6,
+              color: subTab === t ? "#fff" : C.textSecondary,
+              fontSize: 12,
+              fontWeight: subTab === t ? 600 : 400,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              transition: "all 0.15s",
+            }}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+      {subTab === "Jobs" && <JobHistory data={data} setData={setData} />}
+      {subTab === "Mileage" && <Mileage data={data} setData={setData} />}
+    </div>
+  );
 }
 
 function AppContent() {
@@ -86,10 +123,9 @@ function AppContent() {
       <div style={S.content}>
         {tab === "Dashboard"    && <Dashboard data={data} />}
         {tab === "New Job"      && <NewJob data={data} setData={setData} onDone={() => setTab("Dashboard")} />}
-        {tab === "Jobs"         && <JobHistory data={data} setData={setData} />}
+        {tab === "Records"      && <Records data={data} setData={setData} />}
         {tab === "Customers"    && <Customers data={data} setData={setData} />}
         {tab === "Expenses"     && <Expenses data={data} setData={setData} />}
-        {tab === "Mileage"      && <Mileage data={data} setData={setData} />}
         {tab === "Appointments" && <Appointments data={data} setData={setData} />}
         {tab === "Export"       && <Export data={data} />}
         {tab === "Settings"     && <Settings tabVisibility={tabVisibility} setTabVisibility={setTabVisibility} />}
