@@ -13,7 +13,6 @@ export const DARK = {
   textSecondary: "#8a8a8a",
   textMuted: "#555555",
 };
-
 export const LIGHT = {
   bg: "#ffffff",
   surface: "#f7f7f8",
@@ -29,11 +28,10 @@ export const LIGHT = {
   textSecondary: "#55556a",
   textMuted: "#909090",
 };
-
 export function makeStyles(C) {
   return {
-    app: { background: C.bg, minHeight: "100vh", fontFamily: "'Roboto', 'Arial', sans-serif", color: C.textPrimary },
-    header: { background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" },
+    app: { background: C.bg, minHeight: "100vh", minHeight: "100dvh", fontFamily: "'Roboto', 'Arial', sans-serif", color: C.textPrimary, paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)", paddingLeft: "env(safe-area-inset-left)", paddingRight: "env(safe-area-inset-right)" },
+    header: { background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 20px", paddingTop: "max(14px, env(safe-area-inset-top))", display: "flex", justifyContent: "space-between", alignItems: "center" },
     nav: { display: "flex", background: C.surface, borderBottom: `1px solid ${C.border}`, overflowX: "auto" },
     navBtn: (active) => ({ padding: "12px 16px", background: "none", border: "none", borderBottom: active ? `2px solid ${C.accent}` : "2px solid transparent", color: active ? C.accent : C.textSecondary, cursor: "pointer", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "inherit", whiteSpace: "nowrap", transition: "all 0.15s" }),
     content: { padding: "20px", maxWidth: 900, margin: "0 auto" },
@@ -54,6 +52,5 @@ export function makeStyles(C) {
     sectionHead: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
   };
 }
-
 export const C = DARK;
 export const S = makeStyles(DARK);
