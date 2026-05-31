@@ -3,10 +3,9 @@ import { useTheme } from "../theme.jsx";
 
 const TOGGLEABLE_TABS = [
   { key: "New Job",      desc: "Job creation wizard" },
-  { key: "Jobs",         desc: "Job history & receipts" },
+  { key: "Records",      desc: "Job history & mileage log" },
   { key: "Customers",    desc: "Customer database" },
   { key: "Expenses",     desc: "Expense tracking" },
-  { key: "Mileage",      desc: "IRS mileage log" },
   { key: "Appointments", desc: "Appointment scheduling" },
   { key: "Export",       desc: "Reports & Excel export" },
 ];
