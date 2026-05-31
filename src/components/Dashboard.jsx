@@ -10,15 +10,22 @@ export default function Dashboard({ data }) {
 
   const thisMonth = new Date().toISOString().slice(0, 7);
   const monthJobs = jobs.filter(j => j.date?.startsWith(thisMonth));
-  const monthIncome = monthJobs.reduce((s, j) => s + Number(j.grandTotal || 0), 0);
-  const totalIncome = jobs.reduce((s, j) => s + Number(j.grandTotal || 0), 0);
+
+  // Handle both camelCase (local) and snake_case (Supabase) field names
+  const getJobTotal = j => Number(j.grandTotal || j.grand_total || 0);
+  const getJobNumber = j => j.jobNumber || j.job_number || "";
+  const getCustomerName = j => j.customerName || j.customer_name || "";
+  const getVehicleYear = j => j.vehicleYear || j.vehicle_year || "";
+  const getVehicleMake = j => j.vehicleMake || j.vehicle_make || "";
+  const getVehicleModel = j => j.vehicleModel || j.vehicle_model || "";
+
+  const monthIncome = monthJobs.reduce((s, j) => s + getJobTotal(j), 0);
+  const totalIncome = jobs.reduce((s, j) => s + getJobTotal(j), 0);
   const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
   const netProfit = totalIncome - totalExpenses;
   const totalMiles = mileage.reduce((s, m) => s + Number(m.miles || 0), 0);
   const mileageDeduction = totalMiles * MILEAGE_RATE;
-  // IRS-correct SE tax: net profit × 92.35% × 15.3%
   const seTax = Math.max(0, netProfit) * 0.9235 * SE_TAX_RATE;
-  // Federal income tax on taxable income (after mileage deduction + 50% SE tax deduction)
   const taxableIncome = Math.max(0, netProfit - mileageDeduction - seTax * 0.5);
   const fedTax = taxableIncome * FED_TAX_RATE;
   const totalTaxEstimate = seTax + fedTax;
@@ -92,12 +99,12 @@ export default function Dashboard({ data }) {
         ) : recentJobs.map(j => (
           <div key={j.id} style={S.row}>
             <div>
-              <div style={{ fontSize: 13 }}>{j.customerName}</div>
-              <div style={{ fontSize: 11, color: C.textMuted }}>{j.vehicleYear} {j.vehicleMake} {j.vehicleModel} · {j.date}</div>
+              <div style={{ fontSize: 13 }}>{getCustomerName(j)}</div>
+              <div style={{ fontSize: 11, color: C.textMuted }}>{getVehicleYear(j)} {getVehicleMake(j)} {getVehicleModel(j)} · {j.date}</div>
             </div>
             <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 14, color: C.green, fontWeight: 600 }}>{fmt(j.grandTotal)}</div>
-              <div style={{ fontSize: 10, color: C.textMuted }}>{j.jobNumber}</div>
+              <div style={{ fontSize: 14, color: C.green, fontWeight: 600 }}>{fmt(getJobTotal(j))}</div>
+              <div style={{ fontSize: 10, color: C.textMuted }}>{getJobNumber(j)}</div>
             </div>
           </div>
         ))}
