@@ -144,7 +144,6 @@ export default function NewJob({ data, setData, onDone }) {
     let custObj = customers.find(c => c.id === selectedCustomer);
     let vehObj = vehicles.find(v => v.id === selectedVehicle);
 
-    // Save new customer if needed
     if (custMode === "new") {
       const nc = { ...newCust, id: uid(), created_at: today() };
       await saveData('customers', nc);
@@ -152,7 +151,6 @@ export default function NewJob({ data, setData, onDone }) {
       setData(prev => ({ ...prev, customers: [...(prev.customers || []), nc] }));
     }
 
-    // Save new vehicle if needed
     if (vehMode === "new" || !vehObj) {
       const nv = { ...newVeh, customer_id: custObj?.id, id: uid(), created_at: today() };
       await saveData('vehicles', nv);
@@ -160,14 +158,11 @@ export default function NewJob({ data, setData, onDone }) {
       setData(prev => ({ ...prev, vehicles: [...(prev.vehicles || []), nv] }));
     }
 
-    // Get AI notes — direct Claude API call
     let aiNotes = "Thank you for choosing Ocasio Mechanical Services. Your vehicle has been serviced with quality parts and professional care. We look forward to seeing you at your next scheduled maintenance.";
     try {
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 1000,
@@ -183,7 +178,6 @@ export default function NewJob({ data, setData, onDone }) {
       console.warn("AI notes unavailable, using fallback");
     }
 
-    // Build job record
     const jn = jobNum();
     const job = {
       id: uid(),
@@ -220,7 +214,6 @@ export default function NewJob({ data, setData, onDone }) {
       created_at: new Date().toISOString()
     };
 
-    // Save job to Supabase
     await saveData('jobs', {
       id: job.id,
       job_number: job.job_number,
@@ -249,7 +242,9 @@ export default function NewJob({ data, setData, onDone }) {
       created_at: job.created_at
     });
 
-   const mileEntry = {
+    const rawTravel = travelMiles.replace(/,/g, "");
+    if (rawTravel && Number(rawTravel) > 0) {
+      const mileEntry = {
         id: uid(),
         date,
         miles: rawTravel,
@@ -419,3 +414,4 @@ export default function NewJob({ data, setData, onDone }) {
       )}
     </div>
   );
+}
