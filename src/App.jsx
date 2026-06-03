@@ -265,7 +265,7 @@ function AppContent() {
       {fabOpen && (
         <div style={{
           position: "fixed",
-          bottom: `calc(90px + env(safe-area-inset-bottom))`,
+          bottom: `calc(100px + env(safe-area-inset-bottom))`,
           right: 20, zIndex: 150,
           display: "flex", flexDirection: "column",
           gap: 10, alignItems: "flex-end",
