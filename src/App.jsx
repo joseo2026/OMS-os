@@ -84,18 +84,13 @@ function Records({ data, setData, initialSubTab, onSubTabChange }) {
 function AppContent() {
   const { C, S } = useTheme();
   const [tabIndex, setTabIndex] = useState(0);
-  const [animating, setAnimating] = useState(false);
-  const [slideDir, setSlideDir] = useState(0); // -1 left, 1 right
+  const [isNewJob, setIsNewJob] = useState(false);
   const [data, setData] = useState(defaultData);
   const [loading, setLoading] = useState(true);
   const [fabOpen, setFabOpen] = useState(false);
   const [recordsSubTab, setRecordsSubTab] = useState("Customers");
-
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
-  const pendingTabIndex = useRef(null);
-
-  const tab = TABS[tabIndex];
 
   useEffect(() => {
     loadData().then(d => {
@@ -105,30 +100,9 @@ function AppContent() {
   }, []);
 
   function navigateTo(newIndex) {
-    if (newIndex === tabIndex || animating) return;
-    const dir = newIndex > tabIndex ? 1 : -1;
-    setSlideDir(dir);
-    setAnimating(true);
-    pendingTabIndex.current = newIndex;
+    setIsNewJob(false);
+    setTabIndex(newIndex);
   }
-
-  function setTab(name) {
-    const idx = TABS.indexOf(name);
-    if (idx !== -1) navigateTo(idx);
-    else if (name === "New Job") {
-      setTabIndex(-1);
-    }
-  }
-
-  useEffect(() => {
-    if (!animating) return;
-    const timer = setTimeout(() => {
-      setTabIndex(pendingTabIndex.current);
-      setAnimating(false);
-      setSlideDir(0);
-    }, 280);
-    return () => clearTimeout(timer);
-  }, [animating]);
 
   function handleTouchStart(e) {
     touchStartX.current = e.touches[0].clientX;
@@ -150,7 +124,7 @@ function AppContent() {
   function handleFabAction(action) {
     setFabOpen(false);
     if (action === "job") {
-      setTabIndex(-1); // special new job state
+      setIsNewJob(true);
     } else if (action === "customer") {
       navigateTo(TABS.indexOf("Records"));
       setRecordsSubTab("Customers");
@@ -174,31 +148,14 @@ function AppContent() {
     );
   }
 
-  // Slide animation styles
-  const entering = {
-    transform: animating ? `translateX(${slideDir * 100}%)` : "translateX(0)",
-    opacity: animating ? 0 : 1,
-    transition: "transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.28s ease",
-  };
-
-  const exiting = {
-    transform: animating ? `translateX(${slideDir * 100}%)` : "translateX(0)",
-    opacity: animating ? 0 : 1,
-    transition: "transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.28s ease",
-    position: "absolute",
-    top: 0, left: 0, right: 0,
-  };
-
-  const isNewJob = tabIndex === -1;
-
   return (
     <div
-      style={S.app}
+      style={{ ...S.app, display: "flex", flexDirection: "column", height: "100dvh", overflow: "hidden" }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
       {/* Header */}
-      <div style={{ position: "sticky", top: 0, zIndex: 100 }}>
+      <div style={{ flexShrink: 0, zIndex: 100 }}>
         <div style={S.header} className="no-print">
           <div>
             <div style={{ fontSize: 11, color: C.accent, letterSpacing: "0.2em", textTransform: "uppercase" }}>Ocasio Mechanical Services LLC</div>
@@ -215,16 +172,68 @@ function AppContent() {
         </div>
       </div>
 
-      {/* Content with slide animation */}
-      <div style={{ ...S.content, paddingBottom: 120, position: "relative", overflow: "hidden" }}>
-        <div style={entering}>
-          {isNewJob && <NewJob data={data} setData={setData} onDone={() => navigateTo(0)} />}
-          {!isNewJob && tab === "Dashboard" && <Dashboard data={data} />}
-          {!isNewJob && tab === "Records"   && <Records data={data} setData={setData} initialSubTab={recordsSubTab} onSubTabChange={setRecordsSubTab} />}
-          {!isNewJob && tab === "Reports"   && <Export data={data} />}
-          {!isNewJob && tab === "Settings"  && <Settings />}
+      {/* Sliding pages container */}
+      <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
+        <div
+          style={{
+            display: "flex",
+            height: "100%",
+            width: `${TABS.length * 100}%`,
+            transform: `translateX(${-(tabIndex * (100 / TABS.length))}%)`,
+            transition: "transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+          }}
+        >
+          {TABS.map((t) => (
+            <div
+              key={t}
+              style={{
+                width: `${100 / TABS.length}%`,
+                height: "100%",
+                overflowY: "auto",
+                flexShrink: 0,
+                paddingBottom: 120,
+                WebkitOverflowScrolling: "touch",
+              }}
+            >
+              <div style={{ padding: 20, maxWidth: 900, margin: "0 auto" }}>
+                {t === "Dashboard" && <Dashboard data={data} />}
+                {t === "Records"   && <Records data={data} setData={setData} initialSubTab={recordsSubTab} onSubTabChange={setRecordsSubTab} />}
+                {t === "Reports"   && <Export data={data} />}
+                {t === "Settings"  && <Settings />}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
+
+      {/* New Job overlay — slides up from bottom */}
+      {isNewJob && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 95,
+          background: C.bg,
+          overflowY: "auto",
+          WebkitOverflowScrolling: "touch",
+          animation: "slideUp 0.32s cubic-bezier(0.4,0,0.2,1) forwards",
+        }}>
+          <div style={{ padding: 20, maxWidth: 900, margin: "0 auto", paddingBottom: 120 }}>
+            <button
+              onClick={() => setIsNewJob(false)}
+              style={{
+                background: "none", border: "none",
+                color: C.accent, fontSize: 13,
+                cursor: "pointer", fontFamily: "inherit",
+                marginBottom: 16, padding: 0,
+                display: "flex", alignItems: "center", gap: 6,
+              }}
+            >
+              ← Back
+            </button>
+            <NewJob data={data} setData={setData} onDone={() => setIsNewJob(false)} />
+          </div>
+        </div>
+      )}
 
       {/* Bottom Nav Bar */}
       <div
@@ -255,7 +264,11 @@ function AppContent() {
             }}
           >
             {TAB_ICONS[t]}
-            <span style={{ fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: !isNewJob && tabIndex === i ? 600 : 400 }}>
+            <span style={{
+              fontSize: 9, letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              fontWeight: !isNewJob && tabIndex === i ? 600 : 400,
+            }}>
               {t}
             </span>
           </button>
