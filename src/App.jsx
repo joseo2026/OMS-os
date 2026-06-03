@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { ThemeProvider, useTheme } from "./theme.jsx";
-import { loadData, saveData } from "./helpers.js";
+import { loadData } from "./helpers.js";
 import { defaultData } from "./constants.js";
 import Dashboard from "./components/Dashboard.jsx";
 import NewJob from "./components/NewJob.jsx";
@@ -11,17 +11,7 @@ import Mileage from "./components/Mileage.jsx";
 import Export from "./components/Export.jsx";
 import Settings from "./components/Settings.jsx";
 
-const ALL_TABS = ["Dashboard", "Records", "Reports", "Settings"];
-const ALWAYS_VISIBLE = ["Dashboard", "Settings"];
-
-function loadTabVisibility() {
-  try {
-    const saved = localStorage.getItem("oms-tab-visibility");
-    return saved ? JSON.parse(saved) : {};
-  } catch {
-    return {};
-  }
-}
+const TABS = ["Dashboard", "Records", "Reports", "Settings"];
 
 function Records({ data, setData }) {
   const { C } = useTheme();
@@ -67,7 +57,6 @@ function AppContent() {
   const [tab, setTab] = useState("Dashboard");
   const [data, setData] = useState(defaultData);
   const [loading, setLoading] = useState(true);
-  const [tabVisibility, setTabVisibility] = useState(loadTabVisibility);
 
   useEffect(() => {
     loadData().then(d => {
@@ -75,15 +64,6 @@ function AppContent() {
       setLoading(false);
     });
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem("oms-tab-visibility", JSON.stringify(tabVisibility));
-    if (tabVisibility[tab] === false && !ALWAYS_VISIBLE.includes(tab)) {
-      setTab("Dashboard");
-    }
-  }, [tabVisibility]);
-
-  const visibleTabs = ALL_TABS.filter(t => ALWAYS_VISIBLE.includes(t) || tabVisibility[t] !== false);
 
   if (loading) {
     return (
@@ -115,7 +95,7 @@ function AppContent() {
         </div>
 
         <div style={S.nav} className="no-print">
-          {visibleTabs.map(t => (
+          {TABS.map(t => (
             <button key={t} style={S.navBtn(tab === t)} onClick={() => setTab(t)}>{t}</button>
           ))}
         </div>
