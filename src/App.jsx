@@ -106,7 +106,7 @@ function AppContent() {
 
   function navigateTo(newIndex) {
     if (newIndex === tabIndex || animating) return;
-    const dir = newIndex > tabIndex ? -1 : 1;
+    const dir = newIndex > tabIndex ? 1 : -1;
     setSlideDir(dir);
     setAnimating(true);
     pendingTabIndex.current = newIndex;
@@ -176,7 +176,7 @@ function AppContent() {
 
   // Slide animation styles
   const entering = {
-    transform: animating ? `translateX(${slideDir * -100}%)` : "translateX(0)",
+    transform: animating ? `translateX(${slideDir * 100}%)` : "translateX(0)",
     opacity: animating ? 0 : 1,
     transition: "transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.28s ease",
   };
