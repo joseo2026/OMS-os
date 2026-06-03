@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTheme } from "../theme.jsx";
 import { uid, today, fmt, saveData, deleteData } from "../helpers.js";
 import { getAppSettings } from "./Settings.jsx";
@@ -10,11 +10,18 @@ function fmtMiles(val) {
   return digits ? Number(digits).toLocaleString() : "";
 }
 
-export default function Mileage({ data, setData }) {
+export default function Mileage({ data, setData, autoAdd, onAutoAddDone }) {
   const { C, S } = useTheme();
   const { mileageRate: MILEAGE_RATE } = getAppSettings();
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ date: today(), miles: "", purpose: "", from: "", to: "" });
+
+  useEffect(() => {
+    if (autoAdd) {
+      setShowModal(true);
+      if (onAutoAddDone) onAutoAddDone();
+    }
+  }, [autoAdd]);
 
   async function save() {
     if (!form.miles || !form.purpose) return;
@@ -37,12 +44,9 @@ export default function Mileage({ data, setData }) {
 
   return (
     <div>
-      <div style={S.sectionHead}>
-        <div>
-          <div style={{ fontSize: 12, color: C.textSecondary }}>{entries.length} entries · {totalMiles.toLocaleString()} total miles</div>
-          <div style={{ fontSize: 16, fontWeight: 600, color: C.green, marginTop: 2 }}>{fmt(deduction)} deduction @ ${Number(MILEAGE_RATE).toFixed(3)}/mi</div>
-        </div>
-        <button style={S.btnPrimary} onClick={() => setShowModal(true)}>+ Log Miles</button>
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 12, color: C.textSecondary }}>{entries.length} entries · {totalMiles.toLocaleString()} total miles</div>
+        <div style={{ fontSize: 16, fontWeight: 600, color: C.green, marginTop: 2 }}>{fmt(deduction)} deduction @ ${Number(MILEAGE_RATE).toFixed(3)}/mi</div>
       </div>
 
       <div style={{ ...S.card, marginBottom: 16 }}>
