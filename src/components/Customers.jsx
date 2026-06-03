@@ -1,12 +1,93 @@
 import { useState, useEffect } from "react";
 import { useTheme } from "../theme.jsx";
-import { uid, today, saveData, deleteData } from "../helpers.js";
+import { uid, today, fmt, saveData, deleteData } from "../helpers.js";
 import Input from "./Input.jsx";
 import Modal from "./Modal.jsx";
 
 const EMPTY_CUSTOMER = { name: "", phone: "", email: "", address: "", city: "", zip: "" };
 const EMPTY_VEHICLE = { year: "", make: "", model: "", vin: "", color: "", notes: "" };
 const EMPTY_NEW_VEHICLE = { year: "", make: "", model: "", vin: "", color: "", notes: "" };
+
+function InvoiceModal({ job, onClose }) {
+  const { C, S } = useTheme();
+  if (!job) return null;
+  const getVal = (a, b) => a || b || "";
+  return (
+    <Modal title={getVal(job.jobNumber, job.job_number)} onClose={onClose}>
+      <div style={{ background: "#fff", color: "#111", borderRadius: 8, padding: 16, fontFamily: "inherit" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14, paddingBottom: 10, borderBottom: "2px solid #3b82f6" }}>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 700 }}>OCASIO</div>
+            <div style={{ fontSize: 10, color: "#666" }}>MECHANICAL SERVICES LLC</div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#3b82f6" }}>{getVal(job.jobNumber, job.job_number)}</div>
+            <div style={{ fontSize: 10, color: "#999" }}>{job.date}</div>
+          </div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+          <div>
+            <div style={{ fontSize: 9, color: "#999", textTransform: "uppercase", marginBottom: 3 }}>Bill To</div>
+            <div style={{ fontSize: 12, fontWeight: 600 }}>{getVal(job.customerName, job.customer_name)}</div>
+            <div style={{ fontSize: 11, color: "#555" }}>{getVal(job.customerPhone, job.customer_phone)}</div>
+            <div style={{ fontSize: 11, color: "#555" }}>{getVal(job.customerAddress, job.customer_address)}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 9, color: "#999", textTransform: "uppercase", marginBottom: 3 }}>Vehicle</div>
+            <div style={{ fontSize: 12, fontWeight: 600 }}>{getVal(job.vehicleYear, job.vehicle_year)} {getVal(job.vehicleMake, job.vehicle_make)} {getVal(job.vehicleModel, job.vehicle_model)}</div>
+            <div style={{ fontSize: 11, color: "#555" }}>Mileage: {job.mileage}</div>
+            {getVal(job.vehicleVin, job.vehicle_vin) && <div style={{ fontSize: 10, color: "#999" }}>VIN: {getVal(job.vehicleVin, job.vehicle_vin)}</div>}
+          </div>
+        </div>
+        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 10 }}>
+          <thead>
+            <tr style={{ borderBottom: "1px solid #ddd" }}>
+              {["Service", "Labor", "Parts", "Total"].map(h => (
+                <th key={h} style={{ textAlign: h === "Service" ? "left" : "right", fontSize: 9, color: "#999", fontWeight: 400, padding: "3px 0", textTransform: "uppercase" }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {(job.lines || []).map((l, i) => (
+              <tr key={i} style={{ borderBottom: "1px solid #f0f0f0" }}>
+                <td style={{ fontSize: 11, padding: "6px 0" }}>{l.service}</td>
+                <td style={{ fontSize: 11, padding: "6px 0", textAlign: "right", color: "#555" }}>{fmt(l.labor)}</td>
+                <td style={{ fontSize: 11, padding: "6px 0", textAlign: "right", color: "#555" }}>{fmt(l.parts)}</td>
+                <td style={{ fontSize: 11, padding: "6px 0", textAlign: "right", fontWeight: 600 }}>{fmt(Number(l.labor) + Number(l.parts))}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div style={{ borderTop: "1px solid #eee", paddingTop: 8, marginBottom: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666", marginBottom: 3 }}><span>Labor</span><span>{fmt(job.labor)}</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666", marginBottom: 3 }}><span>Parts</span><span>{fmt(job.parts)}</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666", marginBottom: 6 }}><span>Tax</span><span>{fmt(job.tax)}</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, fontWeight: 700, borderTop: "2px solid #111", paddingTop: 6 }}>
+            <span>GRAND TOTAL</span>
+            <span style={{ color: "#3b82f6" }}>{fmt(job.grandTotal || job.grand_total)}</span>
+          </div>
+          <div style={{ fontSize: 10, color: "#999", marginTop: 4 }}>Payment: {job.payMethod || job.pay_method}</div>
+        </div>
+        {(job.aiNotes || job.ai_notes) && (
+          <div style={{ background: "#f9f9f9", borderLeft: "3px solid #3b82f6", padding: "8px 10px", fontSize: 11, color: "#555", lineHeight: 1.5, marginBottom: 10, borderRadius: "0 4px 4px 0" }}>
+            {job.aiNotes || job.ai_notes}
+          </div>
+        )}
+        <div style={{ textAlign: "center", borderTop: "1px solid #eee", paddingTop: 10 }}>
+          <div style={{ fontSize: 11, fontWeight: 700 }}>PAYMENT DUE UPON RECEIPT</div>
+          <div style={{ fontSize: 10, color: "#999" }}>Make checks payable to: Ocasio Mechanical Services, LLC</div>
+          <div style={{ fontSize: 11, color: "#3b82f6", marginTop: 4, fontWeight: 700 }}>Thank You For Your Business!</div>
+        </div>
+      </div>
+      <button
+        onClick={() => window.print()}
+        style={{ ...S.btnPrimary, width: "100%", marginTop: 12 }}
+      >
+        Print / Save PDF
+      </button>
+    </Modal>
+  );
+}
 
 export default function Customers({ data, setData, autoAdd, onAutoAddDone }) {
   const { C, S } = useTheme();
@@ -19,8 +100,8 @@ export default function Customers({ data, setData, autoAdd, onAutoAddDone }) {
   const [vehicleForm, setVehicleForm] = useState(EMPTY_VEHICLE);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [confirmDeleteVehicle, setConfirmDeleteVehicle] = useState(null);
+  const [viewingJob, setViewingJob] = useState(null);
 
-  // Auto open modal when triggered from FAB
   useEffect(() => {
     if (autoAdd) {
       setShowCustomerModal(true);
@@ -45,18 +126,12 @@ export default function Customers({ data, setData, autoAdd, onAutoAddDone }) {
     const newVehicle = hasVehicle
       ? { ...newVehicleForm, customer_id: customerId, id: uid(), created_at: today() }
       : null;
-
     await saveData('customers', newCustomer);
     if (newVehicle) await saveData('vehicles', newVehicle);
-
-    const updatedVehicles = newVehicle
-      ? [...(data.vehicles || []), newVehicle]
-      : data.vehicles || [];
-
     setData({
       ...data,
       customers: [...(data.customers || []), newCustomer],
-      vehicles: updatedVehicles
+      vehicles: newVehicle ? [...(data.vehicles || []), newVehicle] : data.vehicles || []
     });
     setCustomerForm(EMPTY_CUSTOMER);
     setNewVehicleForm(EMPTY_NEW_VEHICLE);
@@ -65,9 +140,7 @@ export default function Customers({ data, setData, autoAdd, onAutoAddDone }) {
 
   async function removeCustomer(id) {
     const custVehicles = (data.vehicles || []).filter(v => v.customer_id === id || v.customerId === id);
-    for (const v of custVehicles) {
-      await deleteData('vehicles', v.id);
-    }
+    for (const v of custVehicles) await deleteData('vehicles', v.id);
     await deleteData('customers', id);
     setData({
       ...data,
@@ -82,20 +155,14 @@ export default function Customers({ data, setData, autoAdd, onAutoAddDone }) {
     if (!vehicleForm.year || !vehicleForm.make || !vehicleForm.model) return;
     const newVehicle = { ...vehicleForm, customer_id: vehicleModal, id: uid(), created_at: today() };
     await saveData('vehicles', newVehicle);
-    setData({
-      ...data,
-      vehicles: [...(data.vehicles || []), newVehicle],
-    });
+    setData({ ...data, vehicles: [...(data.vehicles || []), newVehicle] });
     setVehicleForm(EMPTY_VEHICLE);
     setVehicleModal(null);
   }
 
   async function removeVehicle(id) {
     await deleteData('vehicles', id);
-    setData({
-      ...data,
-      vehicles: (data.vehicles || []).filter(v => v.id !== id)
-    });
+    setData({ ...data, vehicles: (data.vehicles || []).filter(v => v.id !== id) });
     setConfirmDeleteVehicle(null);
   }
 
@@ -114,7 +181,9 @@ export default function Customers({ data, setData, autoAdd, onAutoAddDone }) {
 
       {filtered.map(c => {
         const cvs = vehicles.filter(v => v.customer_id === c.id || v.customerId === c.id);
-        const cJobs = jobs.filter(j => j.customer_id === c.id || j.customerId === c.id || cvs.some(v => v.id === j.vehicleId || v.id === j.vehicle_id));
+        const cJobs = jobs
+          .filter(j => j.customer_id === c.id || j.customerId === c.id || cvs.some(v => v.id === j.vehicleId || v.id === j.vehicle_id))
+          .sort((a, b) => b.date?.localeCompare(a.date));
         const isOpen = expanded === c.id;
 
         return (
@@ -143,19 +212,16 @@ export default function Customers({ data, setData, autoAdd, onAutoAddDone }) {
 
             {isOpen && (
               <div style={{ borderTop: `1px solid ${C.border}`, padding: "14px 18px" }}>
+
+                {/* Vehicles */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                   <div style={{ fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600 }}>Vehicles</div>
-                  <button
-                    style={{ ...S.btnPrimary, padding: "5px 14px", fontSize: 11 }}
-                    onClick={() => { setVehicleModal(c.id); setVehicleForm(EMPTY_VEHICLE); }}
-                  >
+                  <button style={{ ...S.btnPrimary, padding: "5px 14px", fontSize: 11 }} onClick={() => { setVehicleModal(c.id); setVehicleForm(EMPTY_VEHICLE); }}>
                     + Add Vehicle
                   </button>
                 </div>
 
-                {cvs.length === 0 && (
-                  <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 12 }}>No vehicles on file — add one above.</div>
-                )}
+                {cvs.length === 0 && <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 12 }}>No vehicles on file.</div>}
 
                 {cvs.map(v => {
                   const vJobs = jobs.filter(j => j.vehicle_id === v.id || j.vehicleId === v.id);
@@ -190,7 +256,33 @@ export default function Customers({ data, setData, autoAdd, onAutoAddDone }) {
                   );
                 })}
 
-                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12, marginTop: 4, display: "flex", justifyContent: "flex-end" }}>
+                {/* Service History */}
+                {cJobs.length > 0 && (
+                  <div style={{ marginTop: 14 }}>
+                    <div style={{ fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, marginBottom: 10 }}>Service History</div>
+                    {cJobs.map(j => (
+                      <div key={j.id} style={{ background: C.elevated, borderRadius: 6, padding: "10px 14px", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div>
+                          <div style={{ fontSize: 11, color: C.accent, fontWeight: 600, marginBottom: 2 }}>{j.jobNumber || j.job_number}</div>
+                          <div style={{ fontSize: 12, color: C.textPrimary }}>{j.lines?.map(l => l.service).join(", ")}</div>
+                          <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{j.date} · {j.mileage} mi</div>
+                        </div>
+                        <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+                          <div style={{ fontSize: 14, color: C.green, fontWeight: 700 }}>{fmt(j.grandTotal || j.grand_total)}</div>
+                          <button
+                            onClick={() => setViewingJob(j)}
+                            style={{ ...S.btnSecondary, padding: "4px 12px", fontSize: 11 }}
+                          >
+                            View →
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Delete customer */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12, marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
                   {confirmDelete === c.id ? (
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                       <span style={{ fontSize: 12, color: C.red }}>Delete customer and all their vehicles?</span>
@@ -207,10 +299,12 @@ export default function Customers({ data, setData, autoAdd, onAutoAddDone }) {
         );
       })}
 
-      {filtered.length === 0 && (
-        <div style={{ fontSize: 12, color: C.textMuted, padding: "20px 0" }}>No customers found</div>
-      )}
+      {filtered.length === 0 && <div style={{ fontSize: 12, color: C.textMuted, padding: "20px 0" }}>No customers found</div>}
 
+      {/* Invoice viewer */}
+      {viewingJob && <InvoiceModal job={viewingJob} onClose={() => setViewingJob(null)} />}
+
+      {/* New Customer modal */}
       {showCustomerModal && (
         <Modal title="New Customer" onClose={() => { setShowCustomerModal(false); setNewVehicleForm(EMPTY_NEW_VEHICLE); }}>
           <Input label="Full Name *" value={customerForm.name} onChange={e => setCustomerForm({ ...customerForm, name: e.target.value })} placeholder="Customer name" />
@@ -241,6 +335,7 @@ export default function Customers({ data, setData, autoAdd, onAutoAddDone }) {
         </Modal>
       )}
 
+      {/* Add Vehicle modal */}
       {vehicleModal && (
         <Modal title="Add Vehicle" onClose={() => setVehicleModal(null)}>
           <div style={{ fontSize: 12, color: C.accent, marginBottom: 12, fontWeight: 500 }}>
