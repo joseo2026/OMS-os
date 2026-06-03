@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTheme } from "../theme.jsx";
 import { uid, today, saveData, deleteData } from "../helpers.js";
 import Input from "./Input.jsx";
@@ -8,7 +8,7 @@ const EMPTY_CUSTOMER = { name: "", phone: "", email: "", address: "", city: "", 
 const EMPTY_VEHICLE = { year: "", make: "", model: "", vin: "", color: "", notes: "" };
 const EMPTY_NEW_VEHICLE = { year: "", make: "", model: "", vin: "", color: "", notes: "" };
 
-export default function Customers({ data, setData }) {
+export default function Customers({ data, setData, autoAdd, onAutoAddDone }) {
   const { C, S } = useTheme();
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [customerForm, setCustomerForm] = useState(EMPTY_CUSTOMER);
@@ -19,6 +19,14 @@ export default function Customers({ data, setData }) {
   const [vehicleForm, setVehicleForm] = useState(EMPTY_VEHICLE);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [confirmDeleteVehicle, setConfirmDeleteVehicle] = useState(null);
+
+  // Auto open modal when triggered from FAB
+  useEffect(() => {
+    if (autoAdd) {
+      setShowCustomerModal(true);
+      if (onAutoAddDone) onAutoAddDone();
+    }
+  }, [autoAdd]);
 
   const vehicles = data.vehicles || [];
   const jobs = data.jobs || [];
@@ -93,9 +101,8 @@ export default function Customers({ data, setData }) {
 
   return (
     <div>
-      <div style={S.sectionHead}>
-        <div style={{ fontSize: 12, color: C.textSecondary }}>{filtered.length} customer{filtered.length !== 1 ? "s" : ""}</div>
-        <button style={S.btnPrimary} onClick={() => setShowCustomerModal(true)}>+ Add Customer</button>
+      <div style={{ fontSize: 12, color: C.textSecondary, marginBottom: 14 }}>
+        {filtered.length} customer{filtered.length !== 1 ? "s" : ""}
       </div>
 
       <input
@@ -214,7 +221,6 @@ export default function Customers({ data, setData }) {
             <Input label="City" value={customerForm.city} onChange={e => setCustomerForm({ ...customerForm, city: e.target.value })} placeholder="City" />
             <Input label="ZIP" value={customerForm.zip} onChange={e => setCustomerForm({ ...customerForm, zip: e.target.value })} placeholder="ZIP" />
           </div>
-
           <div style={{ borderTop: `1px solid ${C.border}`, margin: "16px 0 12px" }} />
           <div style={{ fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, marginBottom: 10 }}>
             Vehicle <span style={{ fontWeight: 400, color: C.textMuted }}>(optional)</span>
@@ -228,7 +234,6 @@ export default function Customers({ data, setData }) {
             <Input label="Color" value={newVehicleForm.color} onChange={e => setNewVehicleForm({ ...newVehicleForm, color: e.target.value })} placeholder="e.g. Silver" />
             <Input label="VIN" value={newVehicleForm.vin} onChange={e => setNewVehicleForm({ ...newVehicleForm, vin: e.target.value })} placeholder="VIN" />
           </div>
-
           <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
             <button style={{ ...S.btnSecondary, flex: 1 }} onClick={() => { setShowCustomerModal(false); setNewVehicleForm(EMPTY_NEW_VEHICLE); }}>Cancel</button>
             <button style={{ ...S.btnPrimary, flex: 1 }} onClick={saveCustomer}>Save Customer</button>
