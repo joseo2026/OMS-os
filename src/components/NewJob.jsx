@@ -249,16 +249,14 @@ export default function NewJob({ data, setData, onDone }) {
       created_at: job.created_at
     });
 
-    // Save mileage if entered
-    const rawTravel = travelMiles.replace(/,/g, "");
-    if (rawTravel && Number(rawTravel) > 0) {
-      const mileEntry = {
+   const mileEntry = {
         id: uid(),
         date,
         miles: rawTravel,
         purpose: `Service call: ${custObj?.name || "customer"} — ${vehObj?.year || ""} ${vehObj?.make || ""} ${vehObj?.model || ""}`.trim(),
         from: "",
         to: custObj?.address ? `${custObj.address}${custObj.city ? ", " + custObj.city : ""}` : "",
+        job_id: job.id,
         created_at: today()
       };
       await saveData('mileage', mileEntry);
