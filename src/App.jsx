@@ -126,7 +126,7 @@ function AppContent() {
         {tab === "New Job"   && <NewJob data={data} setData={setData} onDone={() => setTab("Dashboard")} />}
         {tab === "Records"   && <Records data={data} setData={setData} />}
         {tab === "Reports"   && <Export data={data} />}
-        {tab === "Settings"  && <Settings tabVisibility={tabVisibility} setTabVisibility={setTabVisibility} />}
+        {tab === "Settings"  && <Settings />}
       </div>
 
       {tab !== "New Job" && (
