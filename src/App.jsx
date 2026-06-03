@@ -41,9 +41,13 @@ const TAB_ICONS = {
   ),
 };
 
-function Records({ data, setData, initialSubTab, onSubTabChange }) {
+function Records({ data, setData, initialSubTab, onSubTabChange, autoAdd, onAutoAddDone }) {
   const { C } = useTheme();
   const [subTab, setSubTab] = useState(initialSubTab || "Customers");
+
+  useEffect(() => {
+    if (initialSubTab) setSubTab(initialSubTab);
+  }, [initialSubTab]);
 
   function handleSubTab(t) {
     setSubTab(t);
@@ -73,10 +77,10 @@ function Records({ data, setData, initialSubTab, onSubTabChange }) {
           </button>
         ))}
       </div>
-      {subTab === "Customers" && <Customers data={data} setData={setData} />}
-      {subTab === "Expenses"  && <Expenses data={data} setData={setData} />}
+      {subTab === "Customers" && <Customers data={data} setData={setData} autoAdd={autoAdd === "customer"} onAutoAddDone={onAutoAddDone} />}
+      {subTab === "Expenses"  && <Expenses  data={data} setData={setData} autoAdd={autoAdd === "expense"}  onAutoAddDone={onAutoAddDone} />}
       {subTab === "Jobs"      && <JobHistory data={data} setData={setData} />}
-      {subTab === "Mileage"   && <Mileage data={data} setData={setData} />}
+      {subTab === "Mileage"   && <Mileage   data={data} setData={setData} autoAdd={autoAdd === "mileage"}  onAutoAddDone={onAutoAddDone} />}
     </div>
   );
 }
@@ -89,6 +93,7 @@ function AppContent() {
   const [loading, setLoading] = useState(true);
   const [fabOpen, setFabOpen] = useState(false);
   const [recordsSubTab, setRecordsSubTab] = useState("Customers");
+  const [recordsAutoAdd, setRecordsAutoAdd] = useState(null);
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
 
@@ -128,12 +133,15 @@ function AppContent() {
     } else if (action === "customer") {
       navigateTo(TABS.indexOf("Records"));
       setRecordsSubTab("Customers");
+      setRecordsAutoAdd("customer");
     } else if (action === "expense") {
       navigateTo(TABS.indexOf("Records"));
       setRecordsSubTab("Expenses");
+      setRecordsAutoAdd("expense");
     } else if (action === "mileage") {
       navigateTo(TABS.indexOf("Records"));
       setRecordsSubTab("Mileage");
+      setRecordsAutoAdd("mileage");
     }
   }
 
@@ -154,7 +162,6 @@ function AppContent() {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Header */}
       <div style={{ flexShrink: 0, zIndex: 100 }}>
         <div style={S.header} className="no-print">
           <div>
@@ -172,7 +179,6 @@ function AppContent() {
         </div>
       </div>
 
-      {/* Sliding pages container */}
       <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
         <div
           style={{
@@ -197,7 +203,7 @@ function AppContent() {
             >
               <div style={{ padding: 20, maxWidth: 900, margin: "0 auto" }}>
                 {t === "Dashboard" && <Dashboard data={data} />}
-                {t === "Records"   && <Records data={data} setData={setData} initialSubTab={recordsSubTab} onSubTabChange={setRecordsSubTab} />}
+                {t === "Records"   && <Records data={data} setData={setData} initialSubTab={recordsSubTab} onSubTabChange={setRecordsSubTab} autoAdd={recordsAutoAdd} onAutoAddDone={() => setRecordsAutoAdd(null)} />}
                 {t === "Reports"   && <Export data={data} />}
                 {t === "Settings"  && <Settings />}
               </div>
@@ -206,14 +212,10 @@ function AppContent() {
         </div>
       </div>
 
-      {/* New Job overlay — slides up from bottom */}
       {isNewJob && (
         <div style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 95,
-          background: C.bg,
-          overflowY: "auto",
+          position: "fixed", inset: 0, zIndex: 95,
+          background: C.bg, overflowY: "auto",
           WebkitOverflowScrolling: "touch",
           animation: "slideUp 0.32s cubic-bezier(0.4,0,0.2,1) forwards",
         }}>
@@ -235,55 +237,31 @@ function AppContent() {
         </div>
       )}
 
-      {/* Bottom Nav Bar */}
-      <div
-        className="no-print"
-        style={{
-          position: "fixed",
-          bottom: 0, left: 0, right: 0,
-          zIndex: 100,
-          background: C.surface,
-          borderTop: `1px solid ${C.border}`,
-          display: "flex",
-          paddingBottom: "env(safe-area-inset-bottom)",
-        }}
-      >
+      <div className="no-print" style={{
+        position: "fixed", bottom: 0, left: 0, right: 0,
+        zIndex: 100, background: C.surface,
+        borderTop: `1px solid ${C.border}`,
+        display: "flex", paddingBottom: "env(safe-area-inset-bottom)",
+      }}>
         {TABS.map((t, i) => (
-          <button
-            key={t}
-            onClick={() => navigateTo(i)}
-            style={{
-              flex: 1, background: "none", border: "none",
-              padding: "10px 4px 8px",
-              cursor: "pointer",
-              display: "flex", flexDirection: "column",
-              alignItems: "center", gap: 3,
-              color: !isNewJob && tabIndex === i ? C.accent : C.textMuted,
-              fontFamily: "inherit",
-              transition: "color 0.15s",
-            }}
-          >
+          <button key={t} onClick={() => navigateTo(i)} style={{
+            flex: 1, background: "none", border: "none",
+            padding: "10px 4px 8px", cursor: "pointer",
+            display: "flex", flexDirection: "column",
+            alignItems: "center", gap: 3,
+            color: !isNewJob && tabIndex === i ? C.accent : C.textMuted,
+            fontFamily: "inherit", transition: "color 0.15s",
+          }}>
             {TAB_ICONS[t]}
-            <span style={{
-              fontSize: 9, letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              fontWeight: !isNewJob && tabIndex === i ? 600 : 400,
-            }}>
+            <span style={{ fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: !isNewJob && tabIndex === i ? 600 : 400 }}>
               {t}
             </span>
           </button>
         ))}
       </div>
 
-      {/* FAB overlay */}
-      {fabOpen && (
-        <div
-          onClick={() => setFabOpen(false)}
-          style={{ position: "fixed", inset: 0, zIndex: 149, background: "rgba(0,0,0,0.4)" }}
-        />
-      )}
+      {fabOpen && <div onClick={() => setFabOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 149, background: "rgba(0,0,0,0.4)" }} />}
 
-      {/* FAB actions */}
       {fabOpen && (
         <div style={{
           position: "fixed",
@@ -305,18 +283,13 @@ function AppContent() {
                 fontSize: 12, color: C.textPrimary,
                 fontFamily: "inherit", whiteSpace: "nowrap",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+              }}>{label}</div>
+              <button onClick={() => handleFabAction(action)} style={{
+                width: 44, height: 44, borderRadius: "50%",
+                background: color, border: "none", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                boxShadow: `0 3px 10px ${color}66`, flexShrink: 0,
               }}>
-                {label}
-              </div>
-              <button
-                onClick={() => handleFabAction(action)}
-                style={{
-                  width: 44, height: 44, borderRadius: "50%",
-                  background: color, border: "none", cursor: "pointer",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  boxShadow: `0 3px 10px ${color}66`, flexShrink: 0,
-                }}
-              >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
                 </svg>
@@ -326,29 +299,22 @@ function AppContent() {
         </div>
       )}
 
-      {/* Main FAB */}
-      <button
-        className="no-print"
-        onClick={() => setFabOpen(!fabOpen)}
-        style={{
-          position: "fixed",
-          bottom: `calc(76px + env(safe-area-inset-bottom))`,
-          right: 20, zIndex: 151,
-          width: 56, height: 56, borderRadius: "50%",
-          background: fabOpen ? C.elevated : C.accent,
-          border: `1px solid ${fabOpen ? C.border : C.accent}`,
-          cursor: "pointer",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: "0 4px 16px rgba(59,130,246,0.4)",
-          transition: "all 0.2s",
-        }}
-      >
-        <svg
-          width="24" height="24" viewBox="0 0 24 24" fill="none"
+      <button className="no-print" onClick={() => setFabOpen(!fabOpen)} style={{
+        position: "fixed",
+        bottom: `calc(76px + env(safe-area-inset-bottom))`,
+        right: 20, zIndex: 151,
+        width: 56, height: 56, borderRadius: "50%",
+        background: fabOpen ? C.elevated : C.accent,
+        border: `1px solid ${fabOpen ? C.border : C.accent}`,
+        cursor: "pointer",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        boxShadow: "0 4px 16px rgba(59,130,246,0.4)",
+        transition: "all 0.2s",
+      }}>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
           stroke={fabOpen ? C.textSecondary : "#fff"}
           strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-          style={{ transform: fabOpen ? "rotate(45deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
-        >
+          style={{ transform: fabOpen ? "rotate(45deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
           <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
         </svg>
       </button>
