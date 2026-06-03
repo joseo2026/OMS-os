@@ -1,15 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTheme } from "../theme.jsx";
 import { uid, today, fmt, saveData, deleteData } from "../helpers.js";
 import { EXPENSE_CATS } from "../constants.js";
 import Input from "./Input.jsx";
 import Modal from "./Modal.jsx";
 
-export default function Expenses({ data, setData }) {
+export default function Expenses({ data, setData, autoAdd, onAutoAddDone }) {
   const { C, S } = useTheme();
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState("All");
   const [form, setForm] = useState({ date: today(), category: EXPENSE_CATS[0], description: "", amount: "", vendor: "", receipt: "" });
+
+  useEffect(() => {
+    if (autoAdd) {
+      setShowModal(true);
+      if (onAutoAddDone) onAutoAddDone();
+    }
+  }, [autoAdd]);
 
   async function save() {
     if (!form.amount || !form.description) return;
@@ -36,12 +43,9 @@ export default function Expenses({ data, setData }) {
 
   return (
     <div>
-      <div style={S.sectionHead}>
-        <div>
-          <div style={{ fontSize: 12, color: C.textSecondary }}>{filtered.length} expenses</div>
-          <div style={{ fontSize: 16, fontWeight: 600, color: C.red, marginTop: 2 }}>{fmt(total)}</div>
-        </div>
-        <button style={S.btnPrimary} onClick={() => setShowModal(true)}>+ Add Expense</button>
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 12, color: C.textSecondary }}>{filtered.length} expenses</div>
+        <div style={{ fontSize: 16, fontWeight: 600, color: C.red, marginTop: 2 }}>{fmt(total)}</div>
       </div>
 
       {catTotals.length > 0 && (
