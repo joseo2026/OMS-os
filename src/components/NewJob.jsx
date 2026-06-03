@@ -419,4 +419,3 @@ export default function NewJob({ data, setData, onDone }) {
       )}
     </div>
   );
-}
