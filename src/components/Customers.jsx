@@ -79,10 +79,7 @@ function InvoiceModal({ job, onClose }) {
           <div style={{ fontSize: 11, color: "#3b82f6", marginTop: 4, fontWeight: 700 }}>Thank You For Your Business!</div>
         </div>
       </div>
-      <button
-        onClick={() => window.print()}
-        style={{ ...S.btnPrimary, width: "100%", marginTop: 12 }}
-      >
+      <button onClick={() => window.print()} style={{ ...S.btnPrimary, width: "100%", marginTop: 12 }}>
         Print / Save PDF
       </button>
     </Modal>
@@ -123,9 +120,7 @@ export default function Customers({ data, setData, autoAdd, onAutoAddDone }) {
     const customerId = uid();
     const newCustomer = { ...customerForm, id: customerId, created_at: today() };
     const hasVehicle = newVehicleForm.year.trim() && newVehicleForm.make.trim() && newVehicleForm.model.trim();
-    const newVehicle = hasVehicle
-      ? { ...newVehicleForm, customer_id: customerId, id: uid(), created_at: today() }
-      : null;
+    const newVehicle = hasVehicle ? { ...newVehicleForm, customer_id: customerId, id: uid(), created_at: today() } : null;
     await saveData('customers', newCustomer);
     if (newVehicle) await saveData('vehicles', newVehicle);
     setData({
@@ -181,13 +176,12 @@ export default function Customers({ data, setData, autoAdd, onAutoAddDone }) {
 
       {filtered.map(c => {
         const cvs = vehicles.filter(v => v.customer_id === c.id || v.customerId === c.id);
-        const cJobs = jobs
-          .filter(j => j.customer_id === c.id || j.customerId === c.id || cvs.some(v => v.id === j.vehicleId || v.id === j.vehicle_id))
-          .sort((a, b) => b.date?.localeCompare(a.date));
+        const cJobs = jobs.filter(j => j.customer_id === c.id || j.customerId === c.id || cvs.some(v => v.id === j.vehicleId || v.id === j.vehicle_id));
         const isOpen = expanded === c.id;
 
         return (
           <div key={c.id} style={{ ...S.card, padding: 0, overflow: "hidden" }}>
+            {/* Customer header */}
             <div
               style={{ padding: "14px 18px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
               onClick={() => setExpanded(isOpen ? null : c.id)}
@@ -210,79 +204,103 @@ export default function Customers({ data, setData, autoAdd, onAutoAddDone }) {
               </div>
             </div>
 
+            {/* Expanded — vehicles with jobs nested inside */}
             {isOpen && (
               <div style={{ borderTop: `1px solid ${C.border}`, padding: "14px 18px" }}>
 
-                {/* Vehicles */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                  <div style={{ fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600 }}>Vehicles</div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600 }}>Vehicles & History</div>
                   <button style={{ ...S.btnPrimary, padding: "5px 14px", fontSize: 11 }} onClick={() => { setVehicleModal(c.id); setVehicleForm(EMPTY_VEHICLE); }}>
                     + Add Vehicle
                   </button>
                 </div>
 
-                {cvs.length === 0 && <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 12 }}>No vehicles on file.</div>}
+                {cvs.length === 0 && (
+                  <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 12 }}>No vehicles on file.</div>
+                )}
 
                 {cvs.map(v => {
-                  const vJobs = jobs.filter(j => j.vehicle_id === v.id || j.vehicleId === v.id);
-                  const lastJob = [...vJobs].sort((a, b) => b.date?.localeCompare(a.date))[0];
+                  const vJobs = [...jobs.filter(j => j.vehicle_id === v.id || j.vehicleId === v.id)]
+                    .sort((a, b) => b.date?.localeCompare(a.date));
+
                   return (
-                    <div key={v.id} style={{ background: C.elevated, borderRadius: 6, padding: "10px 14px", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{v.year} {v.make} {v.model}</div>
-                        {v.color && <div style={{ fontSize: 11, color: C.textMuted }}>Color: {v.color}</div>}
-                        {v.vin && <div style={{ fontSize: 11, color: C.textMuted }}>VIN: {v.vin}</div>}
-                        {lastJob
-                          ? <div style={{ fontSize: 11, color: C.textSecondary, marginTop: 4 }}>Last service: {lastJob.date} · {lastJob.mileage} mi</div>
-                          : <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>No service history</div>
-                        }
-                        <div style={{ marginTop: 4 }}>
-                          <span style={S.tag(C.textSecondary)}>{vJobs.length} job{vJobs.length !== 1 ? "s" : ""}</span>
-                        </div>
-                        {v.notes && <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4, fontStyle: "italic" }}>{v.notes}</div>}
-                      </div>
-                      <div>
-                        {confirmDeleteVehicle === v.id ? (
-                          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                            <span style={{ fontSize: 11, color: C.red }}>Remove?</span>
-                            <button style={{ ...S.btnDanger, padding: "3px 10px", fontSize: 11 }} onClick={() => removeVehicle(v.id)}>Yes</button>
-                            <button style={{ ...S.btnSecondary, padding: "3px 10px", fontSize: 11 }} onClick={() => setConfirmDeleteVehicle(null)}>No</button>
+                    <div key={v.id} style={{ background: C.elevated, borderRadius: 8, marginBottom: 12, overflow: "hidden" }}>
+                      {/* Vehicle header */}
+                      <div style={{ padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{v.year} {v.make} {v.model}</div>
+                          {v.color && <div style={{ fontSize: 11, color: C.textMuted }}>Color: {v.color}</div>}
+                          {v.vin && <div style={{ fontSize: 11, color: C.textMuted }}>VIN: {v.vin}</div>}
+                          {v.notes && <div style={{ fontSize: 11, color: C.textMuted, fontStyle: "italic", marginTop: 2 }}>{v.notes}</div>}
+                          <div style={{ marginTop: 6 }}>
+                            <span style={S.tag(C.textSecondary)}>{vJobs.length} job{vJobs.length !== 1 ? "s" : ""}</span>
                           </div>
-                        ) : (
-                          <button style={{ ...S.btnDanger, padding: "4px 10px", fontSize: 11 }} onClick={() => setConfirmDeleteVehicle(v.id)}>Remove</button>
-                        )}
+                        </div>
+                        <div>
+                          {confirmDeleteVehicle === v.id ? (
+                            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                              <span style={{ fontSize: 11, color: C.red }}>Remove?</span>
+                              <button style={{ ...S.btnDanger, padding: "3px 10px", fontSize: 11 }} onClick={() => removeVehicle(v.id)}>Yes</button>
+                              <button style={{ ...S.btnSecondary, padding: "3px 10px", fontSize: 11 }} onClick={() => setConfirmDeleteVehicle(null)}>No</button>
+                            </div>
+                          ) : (
+                            <button style={{ ...S.btnDanger, padding: "4px 10px", fontSize: 11 }} onClick={() => setConfirmDeleteVehicle(v.id)}>Remove</button>
+                          )}
+                        </div>
                       </div>
+
+                      {/* Jobs for this vehicle */}
+                      {vJobs.length > 0 && (
+                        <div style={{ borderTop: `1px solid ${C.border}` }}>
+                          {vJobs.map((j, idx) => (
+                            <div
+                              key={j.id}
+                              style={{
+                                padding: "10px 14px",
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                borderBottom: idx < vJobs.length - 1 ? `1px solid ${C.border}` : "none",
+                              }}
+                            >
+                              <div>
+                                <div style={{ fontSize: 11, color: C.accent, fontWeight: 600, marginBottom: 2 }}>
+                                  {j.jobNumber || j.job_number}
+                                </div>
+                                <div style={{ fontSize: 12, color: C.textPrimary }}>
+                                  {j.lines?.map(l => l.service).join(", ")}
+                                </div>
+                                <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+                                  {j.date} · {j.mileage} mi
+                                </div>
+                              </div>
+                              <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+                                <div style={{ fontSize: 13, color: C.green, fontWeight: 700 }}>
+                                  {fmt(j.grandTotal || j.grand_total)}
+                                </div>
+                                <button
+                                  onClick={() => setViewingJob(j)}
+                                  style={{ ...S.btnSecondary, padding: "4px 12px", fontSize: 11 }}
+                                >
+                                  View →
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {vJobs.length === 0 && (
+                        <div style={{ padding: "8px 14px", borderTop: `1px solid ${C.border}`, fontSize: 11, color: C.textMuted }}>
+                          No service history yet
+                        </div>
+                      )}
                     </div>
                   );
                 })}
 
-                {/* Service History */}
-                {cJobs.length > 0 && (
-                  <div style={{ marginTop: 14 }}>
-                    <div style={{ fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, marginBottom: 10 }}>Service History</div>
-                    {cJobs.map(j => (
-                      <div key={j.id} style={{ background: C.elevated, borderRadius: 6, padding: "10px 14px", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div>
-                          <div style={{ fontSize: 11, color: C.accent, fontWeight: 600, marginBottom: 2 }}>{j.jobNumber || j.job_number}</div>
-                          <div style={{ fontSize: 12, color: C.textPrimary }}>{j.lines?.map(l => l.service).join(", ")}</div>
-                          <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{j.date} · {j.mileage} mi</div>
-                        </div>
-                        <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
-                          <div style={{ fontSize: 14, color: C.green, fontWeight: 700 }}>{fmt(j.grandTotal || j.grand_total)}</div>
-                          <button
-                            onClick={() => setViewingJob(j)}
-                            style={{ ...S.btnSecondary, padding: "4px 12px", fontSize: 11 }}
-                          >
-                            View →
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
                 {/* Delete customer */}
-                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12, marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12, marginTop: 4, display: "flex", justifyContent: "flex-end" }}>
                   {confirmDelete === c.id ? (
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                       <span style={{ fontSize: 12, color: C.red }}>Delete customer and all their vehicles?</span>
@@ -301,10 +319,8 @@ export default function Customers({ data, setData, autoAdd, onAutoAddDone }) {
 
       {filtered.length === 0 && <div style={{ fontSize: 12, color: C.textMuted, padding: "20px 0" }}>No customers found</div>}
 
-      {/* Invoice viewer */}
       {viewingJob && <InvoiceModal job={viewingJob} onClose={() => setViewingJob(null)} />}
 
-      {/* New Customer modal */}
       {showCustomerModal && (
         <Modal title="New Customer" onClose={() => { setShowCustomerModal(false); setNewVehicleForm(EMPTY_NEW_VEHICLE); }}>
           <Input label="Full Name *" value={customerForm.name} onChange={e => setCustomerForm({ ...customerForm, name: e.target.value })} placeholder="Customer name" />
@@ -335,7 +351,6 @@ export default function Customers({ data, setData, autoAdd, onAutoAddDone }) {
         </Modal>
       )}
 
-      {/* Add Vehicle modal */}
       {vehicleModal && (
         <Modal title="Add Vehicle" onClose={() => setVehicleModal(null)}>
           <div style={{ fontSize: 12, color: C.accent, marginBottom: 12, fontWeight: 500 }}>
