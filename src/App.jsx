@@ -83,16 +83,19 @@ function Records({ data, setData, initialSubTab, onSubTabChange }) {
 
 function AppContent() {
   const { C, S } = useTheme();
-  const [tab, setTab] = useState("Dashboard");
+  const [tabIndex, setTabIndex] = useState(0);
+  const [animating, setAnimating] = useState(false);
+  const [slideDir, setSlideDir] = useState(0); // -1 left, 1 right
   const [data, setData] = useState(defaultData);
   const [loading, setLoading] = useState(true);
   const [fabOpen, setFabOpen] = useState(false);
   const [recordsSubTab, setRecordsSubTab] = useState("Customers");
-  const [showNewJob, setShowNewJob] = useState(false);
 
-  // Swipe handling
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
+  const pendingTabIndex = useRef(null);
+
+  const tab = TABS[tabIndex];
 
   useEffect(() => {
     loadData().then(d => {
@@ -100,6 +103,32 @@ function AppContent() {
       setLoading(false);
     });
   }, []);
+
+  function navigateTo(newIndex) {
+    if (newIndex === tabIndex || animating) return;
+    const dir = newIndex > tabIndex ? -1 : 1;
+    setSlideDir(dir);
+    setAnimating(true);
+    pendingTabIndex.current = newIndex;
+  }
+
+  function setTab(name) {
+    const idx = TABS.indexOf(name);
+    if (idx !== -1) navigateTo(idx);
+    else if (name === "New Job") {
+      setTabIndex(-1);
+    }
+  }
+
+  useEffect(() => {
+    if (!animating) return;
+    const timer = setTimeout(() => {
+      setTabIndex(pendingTabIndex.current);
+      setAnimating(false);
+      setSlideDir(0);
+    }, 280);
+    return () => clearTimeout(timer);
+  }, [animating]);
 
   function handleTouchStart(e) {
     touchStartX.current = e.touches[0].clientX;
@@ -111,9 +140,8 @@ function AppContent() {
     const dx = e.changedTouches[0].clientX - touchStartX.current;
     const dy = e.changedTouches[0].clientY - touchStartY.current;
     if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
-      const idx = TABS.indexOf(tab);
-      if (dx < 0 && idx < TABS.length - 1) setTab(TABS[idx + 1]);
-      if (dx > 0 && idx > 0) setTab(TABS[idx - 1]);
+      if (dx < 0 && tabIndex < TABS.length - 1) navigateTo(tabIndex + 1);
+      if (dx > 0 && tabIndex > 0) navigateTo(tabIndex - 1);
     }
     touchStartX.current = null;
     touchStartY.current = null;
@@ -122,16 +150,15 @@ function AppContent() {
   function handleFabAction(action) {
     setFabOpen(false);
     if (action === "job") {
-      setShowNewJob(true);
-      setTab("New Job");
+      setTabIndex(-1); // special new job state
     } else if (action === "customer") {
-      setTab("Records");
+      navigateTo(TABS.indexOf("Records"));
       setRecordsSubTab("Customers");
     } else if (action === "expense") {
-      setTab("Records");
+      navigateTo(TABS.indexOf("Records"));
       setRecordsSubTab("Expenses");
     } else if (action === "mileage") {
-      setTab("Records");
+      navigateTo(TABS.indexOf("Records"));
       setRecordsSubTab("Mileage");
     }
   }
@@ -146,6 +173,23 @@ function AppContent() {
       </div>
     );
   }
+
+  // Slide animation styles
+  const entering = {
+    transform: animating ? `translateX(${slideDir * -100}%)` : "translateX(0)",
+    opacity: animating ? 0 : 1,
+    transition: "transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.28s ease",
+  };
+
+  const exiting = {
+    transform: animating ? `translateX(${slideDir * 100}%)` : "translateX(0)",
+    opacity: animating ? 0 : 1,
+    transition: "transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.28s ease",
+    position: "absolute",
+    top: 0, left: 0, right: 0,
+  };
+
+  const isNewJob = tabIndex === -1;
 
   return (
     <div
@@ -171,13 +215,15 @@ function AppContent() {
         </div>
       </div>
 
-      {/* Content */}
-      <div style={{ ...S.content, paddingBottom: 120 }}>
-        {tab === "Dashboard" && <Dashboard data={data} />}
-        {tab === "New Job"   && <NewJob data={data} setData={setData} onDone={() => setTab("Dashboard")} />}
-        {tab === "Records"   && <Records data={data} setData={setData} initialSubTab={recordsSubTab} onSubTabChange={setRecordsSubTab} />}
-        {tab === "Reports"   && <Export data={data} />}
-        {tab === "Settings"  && <Settings />}
+      {/* Content with slide animation */}
+      <div style={{ ...S.content, paddingBottom: 120, position: "relative", overflow: "hidden" }}>
+        <div style={entering}>
+          {isNewJob && <NewJob data={data} setData={setData} onDone={() => navigateTo(0)} />}
+          {!isNewJob && tab === "Dashboard" && <Dashboard data={data} />}
+          {!isNewJob && tab === "Records"   && <Records data={data} setData={setData} initialSubTab={recordsSubTab} onSubTabChange={setRecordsSubTab} />}
+          {!isNewJob && tab === "Reports"   && <Export data={data} />}
+          {!isNewJob && tab === "Settings"  && <Settings />}
+        </div>
       </div>
 
       {/* Bottom Nav Bar */}
@@ -185,9 +231,7 @@ function AppContent() {
         className="no-print"
         style={{
           position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 0,
+          bottom: 0, left: 0, right: 0,
           zIndex: 100,
           background: C.surface,
           borderTop: `1px solid ${C.border}`,
@@ -195,34 +239,30 @@ function AppContent() {
           paddingBottom: "env(safe-area-inset-bottom)",
         }}
       >
-        {TABS.map(t => (
+        {TABS.map((t, i) => (
           <button
             key={t}
-            onClick={() => setTab(t)}
+            onClick={() => navigateTo(i)}
             style={{
-              flex: 1,
-              background: "none",
-              border: "none",
+              flex: 1, background: "none", border: "none",
               padding: "10px 4px 8px",
               cursor: "pointer",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 3,
-              color: tab === t ? C.accent : C.textMuted,
+              display: "flex", flexDirection: "column",
+              alignItems: "center", gap: 3,
+              color: !isNewJob && tabIndex === i ? C.accent : C.textMuted,
               fontFamily: "inherit",
               transition: "color 0.15s",
             }}
           >
             {TAB_ICONS[t]}
-            <span style={{ fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: tab === t ? 600 : 400 }}>
+            <span style={{ fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: !isNewJob && tabIndex === i ? 600 : 400 }}>
               {t}
             </span>
           </button>
         ))}
       </div>
 
-      {/* FAB overlay — close when tapping background */}
+      {/* FAB overlay */}
       {fabOpen && (
         <div
           onClick={() => setFabOpen(false)}
@@ -230,34 +270,27 @@ function AppContent() {
         />
       )}
 
-      {/* FAB action buttons */}
+      {/* FAB actions */}
       {fabOpen && (
         <div style={{
           position: "fixed",
           bottom: `calc(90px + env(safe-area-inset-bottom))`,
-          right: 20,
-          zIndex: 150,
-          display: "flex",
-          flexDirection: "column",
-          gap: 10,
-          alignItems: "flex-end",
+          right: 20, zIndex: 150,
+          display: "flex", flexDirection: "column",
+          gap: 10, alignItems: "flex-end",
         }}>
           {[
-            { label: "New Job", action: "job", color: C.accent },
+            { label: "New Job",      action: "job",      color: C.accent },
             { label: "New Customer", action: "customer", color: "#10b981" },
-            { label: "New Expense", action: "expense", color: "#f59e0b" },
-            { label: "Log Mileage", action: "mileage", color: "#8b5cf6" },
+            { label: "New Expense",  action: "expense",  color: "#f59e0b" },
+            { label: "Log Mileage",  action: "mileage",  color: "#8b5cf6" },
           ].map(({ label, action, color }) => (
             <div key={action} style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <div style={{
-                background: C.surface,
-                border: `1px solid ${C.border}`,
-                borderRadius: 20,
-                padding: "6px 14px",
-                fontSize: 12,
-                color: C.textPrimary,
-                fontFamily: "inherit",
-                whiteSpace: "nowrap",
+                background: C.surface, border: `1px solid ${C.border}`,
+                borderRadius: 20, padding: "6px 14px",
+                fontSize: 12, color: C.textPrimary,
+                fontFamily: "inherit", whiteSpace: "nowrap",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
               }}>
                 {label}
@@ -265,17 +298,10 @@ function AppContent() {
               <button
                 onClick={() => handleFabAction(action)}
                 style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: "50%",
-                  background: color,
-                  border: "none",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  boxShadow: `0 3px 10px ${color}66`,
-                  flexShrink: 0,
+                  width: 44, height: 44, borderRadius: "50%",
+                  background: color, border: "none", cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  boxShadow: `0 3px 10px ${color}66`, flexShrink: 0,
                 }}
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -294,17 +320,12 @@ function AppContent() {
         style={{
           position: "fixed",
           bottom: `calc(76px + env(safe-area-inset-bottom))`,
-          right: 20,
-          zIndex: 151,
-          width: 56,
-          height: 56,
-          borderRadius: "50%",
+          right: 20, zIndex: 151,
+          width: 56, height: 56, borderRadius: "50%",
           background: fabOpen ? C.elevated : C.accent,
           border: `1px solid ${fabOpen ? C.border : C.accent}`,
           cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          display: "flex", alignItems: "center", justifyContent: "center",
           boxShadow: "0 4px 16px rgba(59,130,246,0.4)",
           transition: "all 0.2s",
         }}
