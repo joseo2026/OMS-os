@@ -1,11 +1,6 @@
 import { useState } from "react";
 import { useTheme } from "../theme.jsx";
 
-const TOGGLEABLE_TABS = [
-  { key: "Records", desc: "Customers, jobs, expenses & mileage" },
-  { key: "Reports", desc: "CPA reports & data export" },
-];
-
 const SETTINGS_KEY = "oms-settings-v1";
 
 function loadSettings() {
@@ -27,33 +22,7 @@ export function getAppSettings() {
   };
 }
 
-function Toggle({ on, onToggle, disabled }) {
-  const { C } = useTheme();
-  return (
-    <div
-      onClick={disabled ? undefined : onToggle}
-      style={{
-        width: 40, height: 22, borderRadius: 11,
-        background: on ? C.accent : C.elevated,
-        border: `1px solid ${on ? C.accent : C.border}`,
-        position: "relative", cursor: disabled ? "not-allowed" : "pointer",
-        transition: "background 0.2s, border-color 0.2s",
-        flexShrink: 0,
-        opacity: disabled ? 0.4 : 1,
-      }}
-    >
-      <div style={{
-        position: "absolute", top: 2,
-        left: on ? 20 : 2,
-        width: 16, height: 16, borderRadius: "50%",
-        background: on ? "#fff" : C.textMuted,
-        transition: "left 0.2s",
-      }} />
-    </div>
-  );
-}
-
-export default function Settings({ tabVisibility, setTabVisibility }) {
+export default function Settings() {
   const { C, S, isDark, toggleTheme } = useTheme();
   const saved = loadSettings();
 
@@ -62,10 +31,6 @@ export default function Settings({ tabVisibility, setTabVisibility }) {
   const [fedTaxRate, setFedTaxRate] = useState(saved?.fedTaxRate ?? 0.22);
   const [flTax, setFlTax] = useState(saved?.flTax ?? 0.07);
   const [savedMsg, setSavedMsg] = useState(false);
-
-  function toggleTab(key) {
-    setTabVisibility(prev => ({ ...prev, [key]: !prev[key] }));
-  }
 
   function saveSettings() {
     const settings = { mileageRate, seTaxRate, fedTaxRate, flTax };
@@ -105,26 +70,6 @@ export default function Settings({ tabVisibility, setTabVisibility }) {
             {isDark ? "Switch to Light" : "Switch to Dark"}
           </button>
         </div>
-      </div>
-
-      {/* Navigation Tabs */}
-      <div style={S.card}>
-        <div style={S.cardTitle}>Navigation Tabs</div>
-        <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 14 }}>
-          Toggle tabs on or off to keep your navigation focused. Dashboard is always visible.
-        </div>
-        {TOGGLEABLE_TABS.map(({ key, desc }) => {
-          const isOn = tabVisibility[key] !== false;
-          return (
-            <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
-              <div>
-                <div style={{ fontSize: 13, color: isOn ? C.textPrimary : C.textMuted, fontWeight: isOn ? 500 : 400 }}>{key}</div>
-                <div style={{ fontSize: 11, color: C.textMuted }}>{desc}</div>
-              </div>
-              <Toggle on={isOn} onToggle={() => toggleTab(key)} />
-            </div>
-          );
-        })}
       </div>
 
       {/* Tax & Rates */}
