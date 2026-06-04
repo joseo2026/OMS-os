@@ -203,10 +203,10 @@ export default function Customers({ data, setData, autoAdd, onAutoAddDone }) {
               <div>
                 <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 2 }}>{c.name}</div>
                 <div style={{ fontSize: 12, color: C.textSecondary }}>
-                  {c.phone}{c.email ? ` · ${c.email}` : ""}
+                  {c.phone}{c.email ? " · " + c.email : ""}
                 </div>
                 {c.address && (
-                  <div style={{ fontSize: 12, color: C.textMuted }}>{c.address}{c.city ? `, ${c.city}` : ""}{c.zip ? ` ${c.zip}` : ""}</div>
+                  <div style={{ fontSize: 12, color: C.textMuted }}>{c.address}{c.city ? ", " + c.city : ""}{c.zip ? " " + c.zip : ""}</div>
                 )}
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -219,9 +219,9 @@ export default function Customers({ data, setData, autoAdd, onAutoAddDone }) {
             </div>
 
             {isOpen && (
-              <div style={{ borderTop: `1px solid ${C.border}`, padding: "14px 18px" }}>
+              <div style={{ borderTop: "1px solid " + C.border, padding: "14px 18px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                  <div style={{ fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600 }}>Vehicles & History</div>
+                  <div style={{ fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600 }}>Vehicles and History</div>
                   <button style={{ ...S.btnPrimary, padding: "5px 14px", fontSize: 11 }} onClick={() => { setVehicleModal(c.id); setVehicleForm(EMPTY_VEHICLE); }}>
                     + Add Vehicle
                   </button>
@@ -261,7 +261,7 @@ export default function Customers({ data, setData, autoAdd, onAutoAddDone }) {
                       </div>
 
                       {vJobs.length > 0 && (
-                        <div style={{ borderTop: `1px solid ${C.border}` }}>
+                        <div style={{ borderTop: "1px solid " + C.border }}>
                           {vJobs.map((j, idx) => (
                             <div
                               key={j.id}
@@ -270,7 +270,7 @@ export default function Customers({ data, setData, autoAdd, onAutoAddDone }) {
                                 display: "flex",
                                 justifyContent: "space-between",
                                 alignItems: "center",
-                                borderBottom: idx < vJobs.length - 1 ? `1px solid ${C.border}` : "none",
+                                borderBottom: idx < vJobs.length - 1 ? "1px solid " + C.border : "none",
                               }}
                             >
                               <div>
@@ -292,7 +292,7 @@ export default function Customers({ data, setData, autoAdd, onAutoAddDone }) {
                                   onClick={() => setViewingJob(j)}
                                   style={{ ...S.btnSecondary, padding: "4px 12px", fontSize: 11 }}
                                 >
-                                  View →
+                                  View
                                 </button>
                               </div>
                             </div>
@@ -301,7 +301,7 @@ export default function Customers({ data, setData, autoAdd, onAutoAddDone }) {
                       )}
 
                       {vJobs.length === 0 && (
-                        <div style={{ padding: "8px 14px", borderTop: `1px solid ${C.border}`, fontSize: 11, color: C.textMuted }}>
+                        <div style={{ padding: "8px 14px", borderTop: "1px solid " + C.border, fontSize: 11, color: C.textMuted }}>
                           No service history yet
                         </div>
                       )}
@@ -309,7 +309,7 @@ export default function Customers({ data, setData, autoAdd, onAutoAddDone }) {
                   );
                 })}
 
-                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12, marginTop: 4, display: "flex", justifyContent: "flex-end" }}>
+                <div style={{ borderTop: "1px solid " + C.border, paddingTop: 12, marginTop: 4, display: "flex", justifyContent: "flex-end" }}>
                   {confirmDelete === c.id ? (
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                       <span style={{ fontSize: 12, color: C.red }}>Delete customer and all their vehicles?</span>
@@ -340,9 +340,9 @@ export default function Customers({ data, setData, autoAdd, onAutoAddDone }) {
             <Input label="City" value={customerForm.city} onChange={e => setCustomerForm({ ...customerForm, city: e.target.value })} placeholder="City" />
             <Input label="ZIP" value={customerForm.zip} onChange={e => setCustomerForm({ ...customerForm, zip: e.target.value })} placeholder="ZIP" />
           </div>
-          <div style={{ borderTop: `1px solid ${C.border}`, margin: "16px 0 12px" }} />
+          <div style={{ borderTop: "1px solid " + C.border, margin: "16px 0 12px" }} />
           <div style={{ fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, marginBottom: 10 }}>
-            Vehicle <span style={{ fontWeight: 400, color: C.textMuted }}>(optional)</span>
+            Vehicle (optional)
           </div>
           <div style={S.grid3}>
             <Input label="Year" value={newVehicleForm.year} onChange={e => setNewVehicleForm({ ...newVehicleForm, year: e.target.value })} placeholder="2020" />
