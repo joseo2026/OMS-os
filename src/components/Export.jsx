@@ -11,18 +11,16 @@ const QUARTERS = [
   { label: "Q4", period: "Sep 1 – Dec 31", due: "Jan 15", from: (y) => `${y}-09-01`, to: (y) => `${y}-12-31` },
 ];
 
-const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent);
-
 function calcMetrics(jobs, expenses, mileage, mileageRate, seTaxRate, fedTaxRate) {
-  const revenue   = jobs.reduce((s, j) => s + Number(j.grandTotal || j.grand_total || 0), 0);
-  const expTotal  = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
-  const miles     = mileage.reduce((s, m) => s + Number(String(m.miles || 0).replace(/,/g, "")), 0);
+  const revenue    = jobs.reduce((s, j) => s + Number(j.grandTotal || j.grand_total || 0), 0);
+  const expTotal   = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+  const miles      = mileage.reduce((s, m) => s + Number(String(m.miles || 0).replace(/,/g, "")), 0);
   const mileDeduct = miles * mileageRate;
-  const netProfit = revenue - expTotal;
-  const seTax     = Math.max(0, netProfit) * 0.9235 * seTaxRate;
-  const taxable   = Math.max(0, netProfit - mileDeduct - seTax * 0.5);
-  const fedTax    = taxable * fedTaxRate;
-  const totalTax  = seTax + fedTax;
+  const netProfit  = revenue - expTotal;
+  const seTax      = Math.max(0, netProfit) * 0.9235 * seTaxRate;
+  const taxable    = Math.max(0, netProfit - mileDeduct - seTax * 0.5);
+  const fedTax     = taxable * fedTaxRate;
+  const totalTax   = seTax + fedTax;
   return { revenue, expTotal, miles, mileDeduct, netProfit, seTax, fedTax, totalTax };
 }
 
@@ -44,8 +42,8 @@ export default function Export({ data }) {
   const allMileage  = data.mileage  || [];
 
   const quarters = useMemo(() => QUARTERS.map(q => {
-    const from = q.from(year);
-    const to   = q.to(year);
+    const from     = q.from(year);
+    const to       = q.to(year);
     const jobs     = allJobs.filter(j => inRange(j.date, from, to));
     const expenses = allExpenses.filter(e => inRange(e.date, from, to));
     const mileage  = allMileage.filter(m => inRange(m.date, from, to));
@@ -60,22 +58,23 @@ export default function Export({ data }) {
     return { jobs, expenses, mileage, metrics: calcMetrics(jobs, expenses, mileage, mileageRate, seTaxRate, fedTaxRate) };
   }, [allJobs, allExpenses, allMileage, year, mileageRate, seTaxRate, fedTaxRate]);
 
-  function buildWorkbook() {
+  function exportExcel() {
     const wb = XLSX.utils.book_new();
     const m  = annual.metrics;
 
+    // Summary tab
     const summaryRows = [
       [`OCASIO MECHANICAL SERVICES LLC — ${year} TAX SUMMARY`],
       [`Generated: ${new Date().toLocaleDateString()}`],
       [],
       ["ANNUAL TOTALS", "Amount"],
-      ["Gross Revenue",                       m.revenue],
-      ["Business Expenses",                   m.expTotal],
-      [`Mileage Deduction (${m.miles} mi)`,   m.mileDeduct],
-      ["Net Profit",                          m.netProfit],
-      ["Self-Employment Tax (15.3%)",         m.seTax],
-      ["Federal Income Tax Est. (22%)",       m.fedTax],
-      ["Total Estimated Tax",                 m.totalTax],
+      ["Gross Revenue",                     m.revenue],
+      ["Business Expenses",                 m.expTotal],
+      [`Mileage Deduction (${m.miles} mi)`, m.mileDeduct],
+      ["Net Profit",                        m.netProfit],
+      ["Self-Employment Tax (15.3%)",       m.seTax],
+      ["Federal Income Tax Est. (22%)",     m.fedTax],
+      ["Total Estimated Tax",               m.totalTax],
       [],
       ["QUARTERLY BREAKDOWN", "Revenue", "Expenses", "Net Profit", "Tax Est.", "Due Date"],
       ...quarters.map(q => [
@@ -90,6 +89,7 @@ export default function Export({ data }) {
     ws1["!cols"] = [{ wch: 40 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 12 }];
     XLSX.utils.book_append_sheet(wb, ws1, "Summary");
 
+    // Jobs tab
     const jobHeaders = ["Job #", "Date", "Customer", "Phone", "Address", "City",
       "Veh Year", "Make", "Model", "VIN", "Mileage", "Services",
       "Labor", "Parts", "Sales Tax", "Grand Total", "Payment"];
@@ -112,6 +112,7 @@ export default function Export({ data }) {
     ws2["!cols"] = [8,10,20,13,22,12,8,10,10,18,8,40,9,9,9,11,10].map(w => ({ wch: w }));
     XLSX.utils.book_append_sheet(wb, ws2, "Jobs");
 
+    // Expenses tab
     const expHeaders = ["Date", "Category", "Description", "Vendor", "Amount"];
     const expRows = annual.expenses.map(e => [e.date, e.category, e.description, e.vendor, Number(e.amount)]);
     expRows.push(["", "", "", "TOTAL", m.expTotal]);
@@ -119,6 +120,7 @@ export default function Export({ data }) {
     ws3["!cols"] = [{ wch: 12 }, { wch: 22 }, { wch: 30 }, { wch: 20 }, { wch: 12 }];
     XLSX.utils.book_append_sheet(wb, ws3, "Expenses");
 
+    // Mileage tab
     const milHeaders = ["Date", "Purpose", "From", "To", "Miles", `Deduction ($${mileageRate}/mi)`];
     const milRows = annual.mileage.map(mi => [
       mi.date, mi.purpose, mi.from, mi.to,
@@ -130,29 +132,21 @@ export default function Export({ data }) {
     ws4["!cols"] = [{ wch: 12 }, { wch: 28 }, { wch: 18 }, { wch: 18 }, { wch: 8 }, { wch: 16 }];
     XLSX.utils.book_append_sheet(wb, ws4, "Mileage");
 
-    return wb;
-  }
-
-  function exportExcel() {
-    const wb = buildWorkbook();
-    const filename = `Ocasio-${year}-Business-Report.xlsx`;
-
-    if (isIOS()) {
-      // iOS: generate blob and open in new tab so user can share/save
-      const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-      const blob = new Blob([wbout], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-      const url = URL.createObjectURL(blob);
-      window.open(url, "_blank");
-      setTimeout(() => URL.revokeObjectURL(url), 10000);
-    } else {
-      // Desktop: standard download
-      XLSX.writeFile(wb, filename);
-    }
+    // Generate blob and trigger download — works on both iOS and desktop
+    const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([wbout], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Ocasio-${year}-Business-Report.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
   }
 
   function printSummary() {
     setPrinting(true);
-    // Give React time to render the print content before printing
     setTimeout(() => {
       window.print();
       setTimeout(() => setPrinting(false), 500);
@@ -248,34 +242,34 @@ export default function Export({ data }) {
           onClick={exportExcel}
           disabled={!hasData}
         >
-          {isIOS() ? "↗ Open Excel File" : `↓ Download ${year} Excel Workbook`}
+          ↓ Download {year} Excel Workbook
         </button>
-        <button style={{ ...S.btnSecondary, width: "100%" }} onClick={printSummary}>
+        <button
+          style={{ ...S.btnSecondary, width: "100%" }}
+          onClick={printSummary}
+          disabled={printing}
+        >
           {printing ? "Preparing..." : "Print / Save as PDF"}
         </button>
         {!hasData && (
-          <div style={{ fontSize: 11, color: C.textMuted, marginTop: 8, textAlign: "center" }}>No data for {year}.</div>
-        )}
-        {isIOS() && (
-          <div style={{ fontSize: 10, color: C.textMuted, marginTop: 8, textAlign: "center" }}>
-            iPhone: tap Open Excel File → tap Share → Save to Files or open in Numbers
+          <div style={{ fontSize: 11, color: C.textMuted, marginTop: 8, textAlign: "center" }}>
+            No data for {year}.
           </div>
         )}
       </div>
 
-      {/* Print report — always in DOM, hidden until printing */}
+      {/* Print report */}
       <div
-        id="print-report"
         style={{
           display: printing ? "block" : "none",
-          position: printing ? "fixed" : "absolute",
-          top: 0, left: 0, right: 0,
-          zIndex: printing ? 9999 : -1,
+          position: "fixed",
+          top: 0, left: 0, right: 0, bottom: 0,
+          zIndex: 9999,
           background: "#fff",
           fontFamily: "'Roboto', Arial, sans-serif",
           color: "#111",
           padding: "32px 40px",
-          minHeight: "100vh",
+          overflowY: "auto",
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #3b82f6", paddingBottom: 16, marginBottom: 24 }}>
@@ -318,13 +312,13 @@ export default function Export({ data }) {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
             <tbody>
               {[
-                ["Gross Revenue",               fmt(annual.metrics.revenue),    "#16a34a", true],
-                ["Business Expenses",           `− ${fmt(annual.metrics.expTotal)}`, "#dc2626", false],
-                ["Mileage Deduction",           `− ${fmt(annual.metrics.mileDeduct)}`, "#dc2626", false],
-                ["Net Profit",                  fmt(annual.metrics.netProfit),  "#111", true],
-                ["Self-Employment Tax (15.3%)", fmt(annual.metrics.seTax),      "#b45309", false],
-                ["Federal Income Tax Est.",     fmt(annual.metrics.fedTax),     "#b45309", false],
-                ["Total Estimated Tax",         fmt(annual.metrics.totalTax),   "#3b82f6", true],
+                ["Gross Revenue",               fmt(annual.metrics.revenue),                    "#16a34a", true],
+                ["Business Expenses",           `− ${fmt(annual.metrics.expTotal)}`,            "#dc2626", false],
+                ["Mileage Deduction",           `− ${fmt(annual.metrics.mileDeduct)}`,          "#dc2626", false],
+                ["Net Profit",                  fmt(annual.metrics.netProfit),                  "#111",    true],
+                ["Self-Employment Tax (15.3%)", fmt(annual.metrics.seTax),                      "#b45309", false],
+                ["Federal Income Tax Est.",     fmt(annual.metrics.fedTax),                     "#b45309", false],
+                ["Total Estimated Tax",         fmt(annual.metrics.totalTax),                   "#3b82f6", true],
               ].map(([label, value, color, bold], i) => (
                 <tr key={i} style={{ borderBottom: "1px solid #f0f0f0" }}>
                   <td style={{ padding: "7px 0", color: "#333" }}>{label}</td>
@@ -340,6 +334,21 @@ export default function Export({ data }) {
 
         <div style={{ borderTop: "1px solid #e0e0e0", paddingTop: 16, fontSize: 10, color: "#999", textAlign: "center" }}>
           Estimates only — consult a licensed tax professional. Ocasio Mechanical Services LLC · Florida · {new Date().toLocaleDateString()}
+        </div>
+
+        <div style={{ marginTop: 24, textAlign: "center" }}>
+          <button
+            onClick={() => { window.print(); }}
+            style={{ background: "#3b82f6", border: "none", borderRadius: 6, padding: "12px 32px", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", marginRight: 12 }}
+          >
+            Print / Save PDF
+          </button>
+          <button
+            onClick={() => setPrinting(false)}
+            style={{ background: "#eee", border: "none", borderRadius: 6, padding: "12px 32px", color: "#333", fontSize: 13, cursor: "pointer" }}
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>
