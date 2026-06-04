@@ -116,21 +116,4 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* About */}
-      <div style={{ ...S.card, marginTop: 4 }}>
-        <div style={S.cardTitle}>About</div>
-        <div style={{ fontSize: 12, color: C.textSecondary, lineHeight: 1.7 }}>
-          <div>Ocasio Mechanical Services LLC</div>
-          <div style={{ color: C.textMuted }}>Mobile Automotive Service · Florida</div>
-          <div style={{ color: C.textMuted, marginTop: 6 }}>
-            FL Sales Tax: {(flTax * 100).toFixed(0)}% · IRS Mileage: ${mileageRate}/mi
-          </div>
-          <div style={{ color: C.textMuted }}>
-            SE Tax: {(seTaxRate * 100).toFixed(1)}% · Federal Est: {(fedTaxRate * 100).toFixed(0)}%
-          </div>
-        </div>
-      </div>
-
-    </div>
-  );
-}
+      
