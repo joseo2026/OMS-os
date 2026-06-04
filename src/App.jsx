@@ -179,7 +179,7 @@ function AppContent() {
         </div>
       </div>
 
-      <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
+      <div style={{ flex: 1, overflow: "hidden", position: "relative", isolation: "isolate" }}>
         <div
           style={{
             display: "flex",
@@ -196,6 +196,7 @@ function AppContent() {
                 width: `${100 / TABS.length}%`,
                 height: "100%",
                 overflowY: "auto",
+                overflowX: "visible",
                 flexShrink: 0,
                 paddingBottom: 120,
                 WebkitOverflowScrolling: "touch",
