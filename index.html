@@ -22,10 +22,15 @@
         body { background: #fff; }
         .no-print { display: none !important; }
       }
+      @keyframes slideUp {
+        from { transform: translateY(100%); }
+        to   { transform: translateY(0); }
+      }
     </style>
   </head>
   <body>
     <div id="root"></div>
+    <div id="modal-root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
