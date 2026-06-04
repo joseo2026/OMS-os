@@ -166,7 +166,6 @@ export default function Customers({ data, setData, autoAdd, onAutoAddDone }) {
     });
     setExpanded(null);
     setConfirmDelete(null);
-  }nfirmDelete(null);
   }
 
   async function saveVehicle() {
