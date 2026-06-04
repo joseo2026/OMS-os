@@ -1,56 +1,39 @@
-export const DARK = {
-  bg: "#0d0d0d",
-  surface: "#141414",
-  elevated: "#1e1e1e",
-  border: "#2a2a2a",
-  borderLight: "#333333",
-  accent: "#3b82f6",
-  accentDim: "#2563eb",
-  green: "#4ade80",
-  red: "#f87171",
-  yellow: "#fbbf24",
-  textPrimary: "#ececec",
-  textSecondary: "#8a8a8a",
-  textMuted: "#555555",
-};
-export const LIGHT = {
-  bg: "#ffffff",
-  surface: "#f7f7f8",
-  elevated: "#efefef",
-  border: "#e0e0e0",
-  borderLight: "#d0d0d0",
-  accent: "#3b82f6",
-  accentDim: "#2563eb",
-  green: "#16a34a",
-  red: "#dc2626",
-  yellow: "#b45309",
-  textPrimary: "#0d0d0d",
-  textSecondary: "#55556a",
-  textMuted: "#909090",
-};
-export function makeStyles(C) {
-  return {
-    app: { background: C.bg, minHeight: "100dvh", fontFamily: "'Roboto', 'Arial', sans-serif", color: C.textPrimary, paddingBottom: "env(safe-area-inset-bottom)", paddingLeft: "env(safe-area-inset-left)", paddingRight: "env(safe-area-inset-right)" },
-    header: { background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 20px", paddingTop: "calc(env(safe-area-inset-top) + 4px)", display: "flex", justifyContent: "space-between", alignItems: "center" },
-    nav: { display: "none" },
-    navBtn: (active) => ({ padding: "12px 16px", background: "none", border: "none", borderBottom: active ? `2px solid ${C.accent}` : "2px solid transparent", color: active ? C.accent : C.textSecondary, cursor: "pointer", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "inherit", whiteSpace: "nowrap", transition: "all 0.15s" }),
-    content: { padding: "20px", maxWidth: 900, margin: "0 auto" },
-    card: { background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: "16px 20px", marginBottom: 12 },
-    cardTitle: { fontSize: 11, color: C.accent, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 14, fontWeight: 500 },
-    input: { width: "100%", background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 6, padding: "9px 12px", color: C.textPrimary, fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box", transition: "border-color 0.15s" },
-    label: { display: "block", fontSize: 10, color: C.textMuted, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.1em" },
-    btnPrimary: { background: C.accent, border: "none", borderRadius: 6, padding: "10px 20px", color: "#fff", fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase" },
-    btnSecondary: { background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 6, padding: "10px 20px", color: C.textSecondary, fontSize: 12, fontWeight: 500, letterSpacing: "0.1em", cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase" },
-    btnDanger: { background: "none", border: `1px solid ${C.red}`, borderRadius: 6, padding: "6px 14px", color: C.red, fontSize: 11, cursor: "pointer", fontFamily: "inherit" },
-    grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 },
-    grid3: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 },
-    stat: { background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 8, padding: "14px 16px" },
-    statLabel: { fontSize: 10, color: C.textMuted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 4 },
-    statValue: { fontSize: 22, fontWeight: 600, color: C.textPrimary },
-    tag: (color) => ({ display: "inline-block", background: color + "22", color: color, border: `1px solid ${color}44`, borderRadius: 4, padding: "2px 8px", fontSize: 10, letterSpacing: "0.08em" }),
-    row: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${C.border}` },
-    sectionHead: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
-  };
+import { useState } from "react";
+import { useTheme } from "../theme.jsx";
+
+export default function Input({ label, as, children, onFocus: extFocus, onBlur: extBlur, ...props }) {
+  const { C, S } = useTheme();
+  const [focused, setFocused] = useState(false);
+  const borderColor = focused ? C.accent : C.border;
+  const handleFocus = (e) => { setFocused(true); extFocus?.(e); };
+  const handleBlur  = (e) => { setFocused(false); extBlur?.(e); };
+  return (
+    <div style={{ marginBottom: 12, width: "100%", minWidth: 0 }}>
+      {label && <label style={S.label}>{label}</label>}
+      {as === "select" ? (
+        <select
+          {...props}
+          style={{ ...S.input, borderColor, width: "100%", maxWidth: "100%", minWidth: 0 }}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+        >
+          {children}
+        </select>
+      ) : as === "textarea" ? (
+        <textarea
+          {...props}
+          style={{ ...S.input, borderColor, resize: "vertical", minHeight: 70, width: "100%", maxWidth: "100%", minWidth: 0 }}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+        />
+      ) : (
+        <input
+          {...props}
+          style={{ ...S.input, borderColor, width: "100%", maxWidth: "100%", minWidth: 0 }}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+        />
+      )}
+    </div>
+  );
 }
-export const C = DARK;
-export const S = makeStyles(DARK);
