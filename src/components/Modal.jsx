@@ -1,6 +1,5 @@
 import { useTheme } from "../theme.jsx";
 import { createPortal } from "react-dom";
-
 export default function Modal({ title, onClose, children }) {
   const { C } = useTheme();
   return createPortal(
@@ -20,11 +19,13 @@ export default function Modal({ title, onClose, children }) {
         background: C.surface,
         border: `1px solid ${C.border}`,
         borderRadius: 10,
-        width: "100%",
+        width: "calc(100% - 32px)",
         maxWidth: 560,
         margin: "16px",
         padding: 24,
         flexShrink: 0,
+        boxSizing: "border-box",
+        overflow: "hidden",
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <div style={{ fontSize: 13, color: C.accent, letterSpacing: "0.12em", textTransform: "uppercase" }}>{title}</div>
