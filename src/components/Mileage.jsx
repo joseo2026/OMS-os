@@ -85,15 +85,11 @@ export default function Mileage({ data, setData, autoAdd, onAutoAddDone }) {
 
       {showModal && (
         <Modal title="Log Mileage" onClose={() => setShowModal(false)}>
-          <div style={S.grid2}>
-            <Input label="Date" type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
-            <Input label="Miles *" type="text" inputMode="numeric" value={form.miles} onChange={e => setForm({ ...form, miles: fmtMiles(e.target.value) })} placeholder="0" />
-          </div>
+          <Input label="Date" type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
+          <Input label="Miles *" type="text" inputMode="numeric" value={form.miles} onChange={e => setForm({ ...form, miles: fmtMiles(e.target.value) })} placeholder="0" />
           <Input label="Purpose *" value={form.purpose} onChange={e => setForm({ ...form, purpose: e.target.value })} placeholder="e.g. Customer service call" />
-          <div style={S.grid2}>
-            <Input label="From" value={form.from} onChange={e => setForm({ ...form, from: e.target.value })} placeholder="Starting location" />
-            <Input label="To" value={form.to} onChange={e => setForm({ ...form, to: e.target.value })} placeholder="Destination" />
-          </div>
+          <Input label="From" value={form.from} onChange={e => setForm({ ...form, from: e.target.value })} placeholder="Starting location" />
+          <Input label="To" value={form.to} onChange={e => setForm({ ...form, to: e.target.value })} placeholder="Destination" />
           {form.miles && (
             <div style={{ background: C.elevated, borderRadius: 6, padding: "10px 12px", marginBottom: 12, fontSize: 12, color: C.green }}>
               Deduction: {fmt(Number(form.miles.replace(/,/g, "")) * MILEAGE_RATE)} @ ${Number(MILEAGE_RATE).toFixed(3)}/mi
