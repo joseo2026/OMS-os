@@ -7,7 +7,7 @@ export default function Modal({ title, onClose, children }) {
       position: "fixed",
       inset: 0,
       background: "#000a",
-      zIndex: 300,
+      zIndex: 500,
       display: "flex",
       alignItems: "flex-start",
       justifyContent: "center",
