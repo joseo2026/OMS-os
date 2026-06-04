@@ -135,15 +135,38 @@ export default function Customers({ data, setData, autoAdd, onAutoAddDone }) {
 
   async function removeCustomer(id) {
     const custVehicles = (data.vehicles || []).filter(v => v.customer_id === id || v.customerId === id);
+    const custJobs = (data.jobs || []).filter(j => j.customer_id === id || j.customerId === id);
+
+    // Delete mileage entries linked to customer's jobs
+    for (const j of custJobs) {
+      const linkedMileage = (data.mileage || []).filter(m => m.job_id === j.id);
+      for (const m of linkedMileage) await deleteData('mileage', m.id);
+    }
+
+    // Delete customer's jobs
+    for (const j of custJobs) await deleteData('jobs', j.id);
+
+    // Delete customer's vehicles
     for (const v of custVehicles) await deleteData('vehicles', v.id);
+
+    // Delete customer
     await deleteData('customers', id);
+
+    const deletedJobIds = custJobs.map(j => j.id);
+    const deletedMileageIds = (data.mileage || [])
+      .filter(m => deletedJobIds.includes(m.job_id))
+      .map(m => m.id);
+
     setData({
       ...data,
       customers: data.customers.filter(c => c.id !== id),
       vehicles: (data.vehicles || []).filter(v => v.customer_id !== id && v.customerId !== id),
+      jobs: (data.jobs || []).filter(j => j.customer_id !== id && j.customerId !== id),
+      mileage: (data.mileage || []).filter(m => !deletedMileageIds.includes(m.id)),
     });
     setExpanded(null);
     setConfirmDelete(null);
+  }nfirmDelete(null);
   }
 
   async function saveVehicle() {
