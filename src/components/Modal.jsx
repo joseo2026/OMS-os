@@ -28,7 +28,7 @@ export default function Modal({ title, onClose, children }) {
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <div style={{ fontSize: 13, color: C.accent, letterSpacing: "0.12em", textTransform: "uppercase" }}>{title}</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: C.textSecondary, fontSize: 20, cursor: "pointer", lineHeight: 1 }}>×</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: C.textSecondary, fontSize: 20, cursor: "pointer", lineHeight: 1 }}>x</button>
         </div>
         {children}
       </div>
