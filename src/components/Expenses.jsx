@@ -88,10 +88,8 @@ export default function Expenses({ data, setData, autoAdd, onAutoAddDone }) {
 
       {showModal && (
         <Modal title="Add Expense" onClose={() => setShowModal(false)}>
-          <div style={S.grid2}>
-            <Input label="Date" type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
-            <Input label="Amount ($) *" type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} placeholder="0.00" />
-          </div>
+          <Input label="Date" type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
+          <Input label="Amount ($) *" type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} placeholder="0.00" />
           <Input label="Category" as="select" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
             {EXPENSE_CATS.map(c => <option key={c} value={c}>{c}</option>)}
           </Input>
