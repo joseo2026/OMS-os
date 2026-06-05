@@ -35,6 +35,7 @@ export default function Export({ data }) {
   const { mileageRate, seTaxRate, fedTaxRate } = getAppSettings();
   const [year, setYear] = useState(new Date().getFullYear());
   const [printing, setPrinting] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const allJobs     = data.jobs     || [];
   const allExpenses = data.expenses || [];
@@ -57,7 +58,7 @@ export default function Export({ data }) {
     return { jobs, expenses, mileage, metrics: calcMetrics(jobs, expenses, mileage, mileageRate, seTaxRate, fedTaxRate) };
   }, [allJobs, allExpenses, allMileage, year, mileageRate, seTaxRate, fedTaxRate]);
 
-  function exportCSV() {
+  function buildCSV() {
     const m = annual.metrics;
     const rows = [];
 
@@ -127,16 +128,27 @@ export default function Export({ data }) {
     rows.push([]);
     rows.push(["Note: Estimates only. Consult a licensed tax professional."]);
 
-    const csv = rows.map(row =>
+    return rows.map(row =>
       row.map(cell => {
         const val = cell == null ? "" : String(cell);
         return val.includes(",") || val.includes('"') || val.includes("\n")
           ? `"${val.replace(/"/g, '""')}"` : val;
       }).join(",")
     ).join("\n");
+  }
 
-    const dataUri = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
-    window.open(dataUri, "_blank");
+  function exportCSV() {
+    setExporting(true);
+    try {
+      const csv = buildCSV();
+      // mailto approach — works on every iOS device, no Safari restrictions
+      const subject = `OMS ${year} Business Report`;
+      const body = csv;
+      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    } catch (e) {
+      alert("Export failed: " + e.message);
+    }
+    setTimeout(() => setExporting(false), 1500);
   }
 
   function printSummary() {
@@ -234,10 +246,13 @@ export default function Export({ data }) {
         <button
           style={{ ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 13, marginBottom: 10 }}
           onClick={exportCSV}
-          disabled={!hasData}
+          disabled={exporting}
         >
-          ↓ Export {year} Report (CSV)
+          {exporting ? "Opening Mail..." : `↓ Export ${year} Report`}
         </button>
+        <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 10, textAlign: "center" }}>
+          Opens Mail app — send to yourself or your accountant
+        </div>
         <button
           style={{ ...S.btnSecondary, width: "100%" }}
           onClick={printSummary}
@@ -247,7 +262,7 @@ export default function Export({ data }) {
         </button>
         {!hasData && (
           <div style={{ fontSize: 11, color: C.textMuted, marginTop: 8, textAlign: "center" }}>
-            No data for {year}.
+            No data for {year} — add jobs, expenses, or mileage first.
           </div>
         )}
       </div>
@@ -311,7 +326,7 @@ export default function Export({ data }) {
                 ["Mileage Deduction",           `− ${fmt(annual.metrics.mileDeduct)}`,     "#dc2626", false],
                 ["Net Profit",                  fmt(annual.metrics.netProfit),             "#111",    true],
                 ["Self-Employment Tax (15.3%)", fmt(annual.metrics.seTax),                "#b45309", false],
-                ["Federal Income Tax Est.",     fmt(annual.metrics.fedTax),               "#b45309", false],
+                ["Federal Income Tax Est.",     fmt(annual.metrics.fedTex),               "#b45309", false],
                 ["Total Estimated Tax",         fmt(annual.metrics.totalTax),             "#3b82f6", true],
               ].map(([label, value, color, bold], i) => (
                 <tr key={i} style={{ borderBottom: "1px solid #f0f0f0" }}>
