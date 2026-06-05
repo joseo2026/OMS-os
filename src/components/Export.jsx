@@ -1,5 +1,4 @@
 import { useState, useMemo } from "react";
-import * as XLSX from "xlsx";
 import { useTheme } from "../theme.jsx";
 import { fmt } from "../helpers.js";
 import { getAppSettings } from "./Settings.jsx";
@@ -58,91 +57,86 @@ export default function Export({ data }) {
     return { jobs, expenses, mileage, metrics: calcMetrics(jobs, expenses, mileage, mileageRate, seTaxRate, fedTaxRate) };
   }, [allJobs, allExpenses, allMileage, year, mileageRate, seTaxRate, fedTaxRate]);
 
-  function exportExcel() {
-    const wb = XLSX.utils.book_new();
-    const m  = annual.metrics;
+  function exportCSV() {
+    const m = annual.metrics;
+    const rows = [];
 
-    // Summary tab
-    const summaryRows = [
-      [`OCASIO MECHANICAL SERVICES LLC — ${year} TAX SUMMARY`],
-      [`Generated: ${new Date().toLocaleDateString()}`],
-      [],
-      ["ANNUAL TOTALS", "Amount"],
-      ["Gross Revenue",                     m.revenue],
-      ["Business Expenses",                 m.expTotal],
-      [`Mileage Deduction (${m.miles} mi)`, m.mileDeduct],
-      ["Net Profit",                        m.netProfit],
-      ["Self-Employment Tax (15.3%)",       m.seTax],
-      ["Federal Income Tax Est. (22%)",     m.fedTax],
-      ["Total Estimated Tax",               m.totalTax],
-      [],
-      ["QUARTERLY BREAKDOWN", "Revenue", "Expenses", "Net Profit", "Tax Est.", "Due Date"],
-      ...quarters.map(q => [
+    rows.push([`OCASIO MECHANICAL SERVICES LLC — ${year} TAX SUMMARY`]);
+    rows.push([`Generated: ${new Date().toLocaleDateString()}`]);
+    rows.push([]);
+
+    rows.push(["ANNUAL TOTALS", "Amount"]);
+    rows.push(["Gross Revenue", m.revenue]);
+    rows.push(["Business Expenses", m.expTotal]);
+    rows.push([`Mileage Deduction (${m.miles} mi)`, m.mileDeduct]);
+    rows.push(["Net Profit", m.netProfit]);
+    rows.push(["Self-Employment Tax (15.3%)", m.seTax]);
+    rows.push(["Federal Income Tax Est.", m.fedTax]);
+    rows.push(["Total Estimated Tax", m.totalTax]);
+    rows.push([]);
+
+    rows.push(["QUARTERLY BREAKDOWN", "Revenue", "Expenses", "Net Profit", "Tax Est.", "Due Date"]);
+    quarters.forEach(q => {
+      rows.push([
         `${q.label} (${q.period})`,
         q.metrics.revenue, q.metrics.expTotal,
         q.metrics.netProfit, q.metrics.totalTax, q.due,
-      ]),
-      [],
-      ["Note: Estimates only. Consult a licensed tax professional."],
-    ];
-    const ws1 = XLSX.utils.aoa_to_sheet(summaryRows);
-    ws1["!cols"] = [{ wch: 40 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 12 }];
-    XLSX.utils.book_append_sheet(wb, ws1, "Summary");
+      ]);
+    });
+    rows.push([]);
 
-    // Jobs tab
-    const jobHeaders = ["Job #", "Date", "Customer", "Phone", "Address", "City",
-      "Veh Year", "Make", "Model", "VIN", "Mileage", "Services",
-      "Labor", "Parts", "Sales Tax", "Grand Total", "Payment"];
-    const jobRows = annual.jobs.map(j => [
-      j.jobNumber || j.job_number, j.date,
-      j.customerName || j.customer_name, j.customerPhone || j.customer_phone,
-      j.customerAddress || j.customer_address, j.customerCity || j.customer_city,
-      j.vehicleYear || j.vehicle_year, j.vehicleMake || j.vehicle_make,
-      j.vehicleModel || j.vehicle_model, j.vehicleVin || j.vehicle_vin, j.mileage,
-      j.lines?.map(l => l.service).join("; "),
-      Number(j.labor), Number(j.parts), Number(j.tax),
-      Number(j.grandTotal || j.grand_total), j.payMethod || j.pay_method,
-    ]);
-    jobRows.push(["", "", "", "", "", "", "", "", "", "", "", "TOTAL",
+    rows.push(["--- JOBS ---"]);
+    rows.push(["Job #", "Date", "Customer", "Phone", "Veh Year", "Make", "Model",
+      "Services", "Labor", "Parts", "Tax", "Grand Total", "Payment"]);
+    annual.jobs.forEach(j => {
+      rows.push([
+        j.jobNumber || j.job_number, j.date,
+        j.customerName || j.customer_name, j.customerPhone || j.customer_phone,
+        j.vehicleYear || j.vehicle_year, j.vehicleMake || j.vehicle_make,
+        j.vehicleModel || j.vehicle_model,
+        j.lines?.map(l => l.service).join("; "),
+        Number(j.labor), Number(j.parts), Number(j.tax),
+        Number(j.grandTotal || j.grand_total), j.payMethod || j.pay_method,
+      ]);
+    });
+    rows.push(["", "", "", "", "", "", "", "TOTAL",
       annual.jobs.reduce((s, j) => s + Number(j.labor || 0), 0),
       annual.jobs.reduce((s, j) => s + Number(j.parts || 0), 0),
       annual.jobs.reduce((s, j) => s + Number(j.tax   || 0), 0),
       m.revenue, ""]);
-    const ws2 = XLSX.utils.aoa_to_sheet([jobHeaders, ...jobRows]);
-    ws2["!cols"] = [8,10,20,13,22,12,8,10,10,18,8,40,9,9,9,11,10].map(w => ({ wch: w }));
-    XLSX.utils.book_append_sheet(wb, ws2, "Jobs");
+    rows.push([]);
 
-    // Expenses tab
-    const expHeaders = ["Date", "Category", "Description", "Vendor", "Amount"];
-    const expRows = annual.expenses.map(e => [e.date, e.category, e.description, e.vendor, Number(e.amount)]);
-    expRows.push(["", "", "", "TOTAL", m.expTotal]);
-    const ws3 = XLSX.utils.aoa_to_sheet([expHeaders, ...expRows]);
-    ws3["!cols"] = [{ wch: 12 }, { wch: 22 }, { wch: 30 }, { wch: 20 }, { wch: 12 }];
-    XLSX.utils.book_append_sheet(wb, ws3, "Expenses");
+    rows.push(["--- EXPENSES ---"]);
+    rows.push(["Date", "Category", "Description", "Vendor", "Amount"]);
+    annual.expenses.forEach(e => {
+      rows.push([e.date, e.category, e.description, e.vendor, Number(e.amount)]);
+    });
+    rows.push(["", "", "", "TOTAL", m.expTotal]);
+    rows.push([]);
 
-    // Mileage tab
-    const milHeaders = ["Date", "Purpose", "From", "To", "Miles", `Deduction ($${mileageRate}/mi)`];
-    const milRows = annual.mileage.map(mi => [
-      mi.date, mi.purpose, mi.from, mi.to,
-      Number(mi.miles),
-      +(Number(mi.miles) * mileageRate).toFixed(2),
-    ]);
-    milRows.push(["", "", "", "TOTAL", m.miles, +m.mileDeduct.toFixed(2)]);
-    const ws4 = XLSX.utils.aoa_to_sheet([milHeaders, ...milRows]);
-    ws4["!cols"] = [{ wch: 12 }, { wch: 28 }, { wch: 18 }, { wch: 18 }, { wch: 8 }, { wch: 16 }];
-    XLSX.utils.book_append_sheet(wb, ws4, "Mileage");
+    rows.push(["--- MILEAGE ---"]);
+    rows.push(["Date", "Purpose", "From", "To", "Miles", `Deduction ($${mileageRate}/mi)`]);
+    annual.mileage.forEach(mi => {
+      rows.push([
+        mi.date, mi.purpose, mi.from, mi.to,
+        Number(mi.miles),
+        +(Number(mi.miles) * mileageRate).toFixed(2),
+      ]);
+    });
+    rows.push(["", "", "", "TOTAL", m.miles, +m.mileDeduct.toFixed(2)]);
+    rows.push([]);
+    rows.push(["Note: Estimates only. Consult a licensed tax professional."]);
 
-    // Generate blob and trigger download — works on both iOS and desktop
-    const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-    const blob = new Blob([wbout], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Ocasio-${year}-Business-Report.xlsx`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    const csv = rows.map(row =>
+      row.map(cell => {
+        const val = cell == null ? "" : String(cell);
+        return val.includes(",") || val.includes('"') || val.includes("\n")
+          ? `"${val.replace(/"/g, '""')}"` : val;
+      }).join(",")
+    ).join("\n");
+
+    const dataUri = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+    window.open(dataUri, "_blank");
   }
 
   function printSummary() {
@@ -239,10 +233,10 @@ export default function Export({ data }) {
         <div style={S.cardTitle}>Export</div>
         <button
           style={{ ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 13, marginBottom: 10 }}
-          onClick={exportExcel}
+          onClick={exportCSV}
           disabled={!hasData}
         >
-          ↓ Download {year} Excel Workbook
+          ↓ Export {year} Report (CSV)
         </button>
         <button
           style={{ ...S.btnSecondary, width: "100%" }}
@@ -312,13 +306,13 @@ export default function Export({ data }) {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
             <tbody>
               {[
-                ["Gross Revenue",               fmt(annual.metrics.revenue),                    "#16a34a", true],
-                ["Business Expenses",           `− ${fmt(annual.metrics.expTotal)}`,            "#dc2626", false],
-                ["Mileage Deduction",           `− ${fmt(annual.metrics.mileDeduct)}`,          "#dc2626", false],
-                ["Net Profit",                  fmt(annual.metrics.netProfit),                  "#111",    true],
-                ["Self-Employment Tax (15.3%)", fmt(annual.metrics.seTax),                      "#b45309", false],
-                ["Federal Income Tax Est.",     fmt(annual.metrics.fedTax),                     "#b45309", false],
-                ["Total Estimated Tax",         fmt(annual.metrics.totalTax),                   "#3b82f6", true],
+                ["Gross Revenue",               fmt(annual.metrics.revenue),               "#16a34a", true],
+                ["Business Expenses",           `− ${fmt(annual.metrics.expTotal)}`,       "#dc2626", false],
+                ["Mileage Deduction",           `− ${fmt(annual.metrics.mileDeduct)}`,     "#dc2626", false],
+                ["Net Profit",                  fmt(annual.metrics.netProfit),             "#111",    true],
+                ["Self-Employment Tax (15.3%)", fmt(annual.metrics.seTax),                "#b45309", false],
+                ["Federal Income Tax Est.",     fmt(annual.metrics.fedTax),               "#b45309", false],
+                ["Total Estimated Tax",         fmt(annual.metrics.totalTax),             "#3b82f6", true],
               ].map(([label, value, color, bold], i) => (
                 <tr key={i} style={{ borderBottom: "1px solid #f0f0f0" }}>
                   <td style={{ padding: "7px 0", color: "#333" }}>{label}</td>
