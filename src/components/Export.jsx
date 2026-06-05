@@ -101,7 +101,6 @@ export default function Export({ data }) {
       const BOTTOM = pageH - 48;
       let y = 0;
 
-      // ── Palette ──
       const NAVY   = [10,  36,  99];
       const STEEL  = [37,  99,  235];
       const BLACK  = [10,  10,  10];
@@ -113,7 +112,6 @@ export default function Export({ data }) {
       const GREEN  = [21,  128, 61];
       const RED    = [185, 28,  28];
 
-      // ── Helpers ──
       function f(style, size)           { doc.setFont("helvetica", style); doc.setFontSize(size); }
       function tc(rgb)                  { doc.setTextColor(...rgb); }
       function fc(rgb)                  { doc.setFillColor(...rgb); }
@@ -123,7 +121,7 @@ export default function Export({ data }) {
       function checkPage(needed = 32)   { if (y + needed > BOTTOM) { doc.addPage(); y = 56; } }
       function newPage()                { doc.addPage(); y = 56; }
 
-      // ── Section label — navy bold all-caps, same row height as data rows ──
+      // ── Section label — navy bold all-caps, inline with doc flow ──
       function sectionLabel(label) {
         checkPage(32);
         y += 10;
@@ -140,7 +138,6 @@ export default function Export({ data }) {
         const indent = opts.indent || 0;
         const bold   = opts.bold   || false;
         const color  = opts.color  || DGRAY;
-
         if (opts.band) {
           fc(XLGRAY); dc(XLGRAY);
           doc.rect(ML, y - 11, colR - ML, 16, "F");
@@ -155,7 +152,7 @@ export default function Export({ data }) {
         y += opts.rule ? 16 : 14;
       }
 
-      // ── Total row ──
+      // ── Standard total row ──
       function totalRow(label, value, color = STEEL) {
         checkPage(22);
         fc(XLGRAY); dc(LGRAY, 0.4);
@@ -169,26 +166,24 @@ export default function Export({ data }) {
         y += 18;
       }
 
-      // ── Net Profit highlight row ──
-      function netProfitRow(value) {
+      // ── Net Profit — open style, bold rule above and below, no box ──
+      function netProfitRow(value, profit) {
         checkPage(24);
-        y += 4;
-        fc([232, 240, 254]); dc(NAVY, 0.75);
-        doc.rect(ML, y - 12, colR - ML, 20, "FD");
-        f("bold", 11);
+        y += 6;
+        hline(y - 4, NAVY, 1);
+        f("bold", 12);
         tc(NAVY);
-        t("Net Profit", ML + 4, y);
-        tc(m.netProfit >= 0 ? GREEN : RED);
-        t(value, colR, y, { align: "right" });
-        hline(y + 6, NAVY, 1.25);
-        y += 18;
+        t("Net Profit", ML, y + 8);
+        tc(profit >= 0 ? GREEN : RED);
+        t(value, colR, y + 8, { align: "right" });
+        hline(y + 13, NAVY, 1);
+        y += 22;
       }
 
       // ════════════════════════════════════════
       // PAGE 1 — Header + Annual Summary
       // ════════════════════════════════════════
 
-      // Full-bleed navy header
       fc(NAVY); dc(NAVY);
       doc.rect(0, 0, pageW, 96, "F");
       fc(STEEL); dc(STEEL);
@@ -205,7 +200,6 @@ export default function Export({ data }) {
       f("normal", 10); tc([147, 197, 253]);
       t("Annual Tax Summary", colR, 68, { align: "right" });
 
-      // Report subtitle
       y = 114;
       f("bold", 13); tc(NAVY);
       t("Annual Tax Summary Report", ML, y);
@@ -239,8 +233,8 @@ export default function Export({ data }) {
       row(`Mileage Deduction  (${m.miles.toLocaleString()} mi × $${mileageRate})`, fmt(m.mileDeduct), { rule: true, color: BLACK });
       totalRow("Total Deductions", fmt(m.expTotal + m.mileDeduct), RED);
 
-      // Net Profit — highlighted, no section label needed
-      netProfitRow(fmt(m.netProfit));
+      // Net Profit — open, no box
+      netProfitRow(fmt(m.netProfit), m.netProfit);
 
       // Estimated Tax Liability
       sectionLabel("Estimated Tax Liability");
@@ -266,7 +260,6 @@ export default function Export({ data }) {
         const qm = q.metrics;
         checkPage(100);
 
-        // Quarter label — navy bold, period in gray, same line, no bar
         f("bold", 10); tc(NAVY);
         t(q.label, ML, y);
         f("normal", 9); tc(MGRAY);
@@ -289,8 +282,6 @@ export default function Export({ data }) {
       y += 4;
 
       const qCols = [ML, colR - 270, colR - 180, colR - 90, colR];
-
-      // Column headers
       f("bold", 8); tc(MGRAY);
       ["", "Q1", "Q2", "Q3", "Q4"].forEach((label, i) =>
         t(label, qCols[i], y, i === 0 ? {} : { align: "right" })
@@ -315,7 +306,7 @@ export default function Export({ data }) {
       });
 
       // ════════════════════════════════════════
-      // PAGE 3 — Expenses + Mileage
+      // Expenses + Mileage
       // ════════════════════════════════════════
       const expMilNeeded = 80 + Math.max(expensesByCategory.length, 1) * 16 + 120;
       checkPage(expMilNeeded);
@@ -330,7 +321,6 @@ export default function Export({ data }) {
       t(`${BIZ.name}  ·  ${year} Annual Tax Summary`, ML, y);
       y += 18;
 
-      // Expenses by category
       sectionLabel("Business Expenses by Category");
 
       if (expensesByCategory.length === 0) {
@@ -338,7 +328,6 @@ export default function Export({ data }) {
         t(`No expenses recorded for ${year}.`, ML, y);
         y += 16;
       } else {
-        // Single column header row
         f("bold", 8); tc(MGRAY);
         t("CATEGORY", ML, y);
         t("% OF TOTAL", colR - 80, y, { align: "right" });
@@ -364,7 +353,6 @@ export default function Export({ data }) {
         totalRow("Total Business Expenses", fmt(m.expTotal), RED);
       }
 
-      // Mileage
       y += 6;
       sectionLabel("Mileage Log Summary");
 
@@ -379,7 +367,6 @@ export default function Export({ data }) {
       y += 4;
       totalRow("Total Mileage Deduction", fmt(m.mileDeduct), RED);
 
-      // Disclaimer
       y += 14;
       checkPage(20);
       hline(y, LGRAY, 0.3);
@@ -389,7 +376,6 @@ export default function Export({ data }) {
         "This report is generated from internal business records and contains estimates only. All figures should be reviewed by a licensed tax professional before filing.",
         ML, y
       );
-      y += 12;
 
       // ── Footer on every page ──
       const pageCount = doc.internal.getNumberOfPages();
