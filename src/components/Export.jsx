@@ -92,15 +92,16 @@ export default function Export({ data }) {
     pdfBlobRef.current = null;
     try {
       const { jsPDF } = await import("jspdf");
-      const doc  = new jsPDF({ unit: "pt", format: "letter" });
-      const m    = annual.metrics;
+      const doc   = new jsPDF({ unit: "pt", format: "letter" });
+      const m     = annual.metrics;
       const pageW = doc.internal.pageSize.getWidth();
       const pageH = doc.internal.pageSize.getHeight();
-      const ML   = 56;
-      const colR = pageW - 56;
-      const BOTTOM = pageH - 56;
+      const ML    = 56;
+      const colR  = pageW - 56;
+      const BOTTOM = pageH - 48;
       let y = 0;
 
+      // ── Palette ──
       const NAVY   = [10,  36,  99];
       const STEEL  = [37,  99,  235];
       const BLACK  = [10,  10,  10];
@@ -112,26 +113,29 @@ export default function Export({ data }) {
       const GREEN  = [21,  128, 61];
       const RED    = [185, 28,  28];
 
-      function f(style, size) { doc.setFont("helvetica", style); doc.setFontSize(size); }
-      function tc(rgb) { doc.setTextColor(...rgb); }
-      function fc(rgb) { doc.setFillColor(...rgb); }
-      function dc(rgb, lw = 0.5) { doc.setDrawColor(...rgb); doc.setLineWidth(lw); }
+      // ── Core helpers ──
+      function f(style, size)           { doc.setFont("helvetica", style); doc.setFontSize(size); }
+      function tc(rgb)                  { doc.setTextColor(...rgb); }
+      function fc(rgb)                  { doc.setFillColor(...rgb); }
+      function dc(rgb, lw = 0.5)        { doc.setDrawColor(...rgb); doc.setLineWidth(lw); }
       function t(str, x, ry, opts = {}) { doc.text(String(str), x, ry, opts); }
       function hline(ry, rgb = LGRAY, lw = 0.5) { dc(rgb, lw); doc.line(ML, ry, colR, ry); }
+
       function checkPage(needed = 32) {
         if (y + needed > BOTTOM) { doc.addPage(); y = 56; }
       }
-      // Force a new page regardless
       function newPage() { doc.addPage(); y = 56; }
 
+      // ── Data row ──
       function row(label, value, opts = {}) {
         checkPage(20);
         const indent = opts.indent || 0;
         const bold   = opts.bold   || false;
         const color  = opts.color  || BLACK;
+
         if (opts.band) {
           fc(XLGRAY); dc(XLGRAY);
-          doc.rect(ML, y - 12, colR - ML, 17, "F");
+          doc.rect(ML, y - 11, colR - ML, 16, "F");
         }
         f(bold ? "bold" : "normal", opts.size || 10);
         tc(bold ? BLACK : DGRAY);
@@ -139,34 +143,35 @@ export default function Export({ data }) {
         tc(color);
         f(bold ? "bold" : "normal", opts.size || 10);
         t(value, colR, y, { align: "right" });
-        if (opts.rule)      hline(y + 4, LGRAY, 0.4);
-        if (opts.ruleHeavy) hline(y + 4, BLACK, 1);
-        if (opts.ruleBlue)  hline(y + 4, STEEL, 0.75);
-        y += (opts.rule || opts.ruleHeavy || opts.ruleBlue) ? 18 : 16;
+        if (opts.rule) hline(y + 4, LGRAY, 0.4);
+        y += opts.rule ? 17 : 15;
       }
 
+      // ── Total row — bold, banded, heavy underline ──
       function totalRow(label, value, color = STEEL) {
         checkPage(24);
         fc(XLGRAY); dc(LGRAY, 0.5);
-        doc.rect(ML, y - 13, colR - ML, 20, "FD");
+        doc.rect(ML, y - 12, colR - ML, 19, "FD");
         f("bold", 11); tc(NAVY);
         t(label, ML + 6, y);
         tc(color);
         t(value, colR, y, { align: "right" });
         hline(y + 5, NAVY, 1);
-        y += 22;
+        y += 20;
       }
 
+      // ── Section header — navy bar, white caps text ──
       function sectionHead(label) {
-        checkPage(36);
-        y += 12;
+        checkPage(34);
+        y += 10;
         fc(NAVY); dc(NAVY);
-        doc.rect(ML, y - 13, colR - ML, 20, "F");
-        f("bold", 10); tc(WHITE);
+        doc.rect(ML, y - 12, colR - ML, 19, "F");
+        f("bold", 9); tc(WHITE);
         t(label.toUpperCase(), ML + 8, y);
-        y += 14;
+        y += 13;
       }
 
+      // ── Column header ──
       function colHeader(labels, xs) {
         f("bold", 8); tc(MGRAY);
         labels.forEach((label, i) => t(label, xs[i], y, i === 0 ? {} : { align: "right" }));
@@ -175,124 +180,140 @@ export default function Export({ data }) {
         y += 9;
       }
 
-      // ── PAGE 1: Header + Annual Summary ──
+      // ── Divider line with breathing room ──
+      function divider() {
+        y += 6;
+        hline(y, LGRAY, 0.3);
+        y += 8;
+      }
+
+      // ════════════════════════════════════════
+      // PAGE 1 — Header + Annual Summary
+      // ════════════════════════════════════════
+
+      // Full-bleed navy header
       fc(NAVY); dc(NAVY);
-      doc.rect(0, 0, pageW, 100, "F");
+      doc.rect(0, 0, pageW, 96, "F");
       fc(STEEL); dc(STEEL);
-      doc.rect(0, 100, pageW, 3, "F");
+      doc.rect(0, 96, pageW, 3, "F");
 
       f("bold", 22); tc(WHITE);
-      t("OCASIO MECHANICAL SERVICES", ML, 38);
+      t("OCASIO MECHANICAL SERVICES", ML, 36);
       f("normal", 11); tc([147, 197, 253]);
-      t("LLC  ·  Mobile Automotive Service  ·  Florida", ML, 56);
+      t("LLC  ·  Mobile Automotive Service  ·  Florida", ML, 53);
       f("normal", 9); tc([147, 197, 253]);
-      t(`${BIZ.address}  ·  ${BIZ.city}  ·  ${BIZ.phone}  ·  ${BIZ.email}`, ML, 72);
-      f("bold", 42); tc(WHITE);
-      t(String(year), colR, 52, { align: "right" });
-      f("normal", 10); tc([147, 197, 253]);
-      t("Annual Tax Summary", colR, 70, { align: "right" });
+      t(`${BIZ.address}  ·  ${BIZ.city}  ·  ${BIZ.phone}  ·  ${BIZ.email}`, ML, 69);
 
-      y = 118;
+      f("bold", 40); tc(WHITE);
+      t(String(year), colR, 50, { align: "right" });
+      f("normal", 10); tc([147, 197, 253]);
+      t("Annual Tax Summary", colR, 68, { align: "right" });
+
+      // Report subtitle block
+      y = 114;
       f("bold", 13); tc(NAVY);
       t("Annual Tax Summary Report", ML, y);
-      y += 14;
+      y += 13;
       f("normal", 10); tc(DGRAY);
       t(`For the year ended December 31, ${year}  ·  Cash Basis`, ML, y);
-      y += 12;
+      y += 11;
       f("normal", 9); tc(MGRAY);
-      t(`Generated: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}   ·   ${annual.jobs.length} jobs completed this year`, ML, y);
-      y += 5;
+      t(
+        `Generated: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}   ·   ${annual.jobs.length} job${annual.jobs.length !== 1 ? "s" : ""} completed this year`,
+        ML, y
+      );
+      y += 8;
       hline(y, LGRAY, 0.5);
       y += 14;
 
+      // ── Tax Rate Settings ──
       sectionHead("Tax Rate Settings Used");
       colHeader(["SETTING", "RATE APPLIED"], [ML + 8, colR]);
       row("Self-Employment Tax Rate",            `${(seTaxRate * 100).toFixed(1)}%`,  { indent: 8, rule: true });
       row("Federal Income Tax Rate (Estimated)", `${(fedTaxRate * 100).toFixed(1)}%`, { indent: 8, rule: true });
       row("IRS Standard Mileage Rate",           `$${mileageRate} per mile`,           { indent: 8, rule: true });
-      y += 4;
 
+      // ── Income & Deductions — combined P&L style ──
       sectionHead("Income");
       colHeader(["DESCRIPTION", "AMOUNT"], [ML + 8, colR]);
       row("Gross Revenue — Automotive Services", fmt(m.revenue), { indent: 8, rule: true, color: BLACK });
-      y += 2;
       totalRow("Total Income", fmt(m.revenue), GREEN);
-      y += 4;
 
       sectionHead("Deductions");
       colHeader(["DESCRIPTION", "AMOUNT"], [ML + 8, colR]);
-      row("Business Expenses", fmt(m.expTotal), { indent: 8, rule: true, color: BLACK });
-      row(`Mileage Deduction  (${m.miles.toLocaleString()} mi × $${mileageRate})`, fmt(m.mileDeduct), { indent: 8, rule: true, color: BLACK });
-      y += 2;
+      row("Business Expenses",                                                          fmt(m.expTotal),   { indent: 8, rule: true, color: BLACK });
+      row(`Mileage Deduction  (${m.miles.toLocaleString()} mi × $${mileageRate})`,     fmt(m.mileDeduct), { indent: 8, rule: true, color: BLACK });
       totalRow("Total Deductions", fmt(m.expTotal + m.mileDeduct), RED);
-      y += 4;
 
-      sectionHead("Net Profit");
-      y += 2;
-      totalRow("Net Profit", fmt(m.netProfit), m.netProfit >= 0 ? GREEN : RED);
+      // ── Net Profit — folded in as bold total row, no separate header ──
       y += 4;
+      checkPage(24);
+      fc([232, 240, 254]); dc(NAVY, 0.75);
+      doc.rect(ML, y - 12, colR - ML, 20, "FD");
+      f("bold", 12); tc(NAVY);
+      t("Net Profit", ML + 6, y);
+      tc(m.netProfit >= 0 ? GREEN : RED);
+      t(fmt(m.netProfit), colR, y, { align: "right" });
+      hline(y + 6, NAVY, 1.5);
+      y += 22;
 
+      // ── Estimated Tax Liability ──
       sectionHead("Estimated Tax Liability");
       colHeader(["DESCRIPTION", "AMOUNT"], [ML + 8, colR]);
       row("Self-Employment Tax  (15.3% × 92.35% of net profit)", fmt(m.seTax),  { indent: 8, rule: true, color: BLACK });
       row("Federal Income Tax Estimate",                          fmt(m.fedTax), { indent: 8, rule: true, color: BLACK });
-      y += 2;
       totalRow("Total Estimated Tax Liability", fmt(m.totalTax), STEEL);
-      y += 6;
 
-      // Quarterly payment callout
-      checkPage(44);
-      fc([239, 246, 255]); dc(STEEL, 1);
-      doc.rect(ML, y, colR - ML, 36, "FD");
-      fc(STEEL); dc(STEEL);
-      doc.rect(ML, y, 4, 36, "F");
-      f("bold", 10); tc(NAVY);
-      t("Estimated Quarterly Tax Payment", ML + 14, y + 13);
-      f("bold", 13); tc(STEEL);
-      t(fmt(m.totalTax / 4), colR - 8, y + 13, { align: "right" });
-      f("normal", 8); tc(MGRAY);
-      t("Due: Q1 Apr 15  ·  Q2 Jun 15  ·  Q3 Sep 15  ·  Q4 Jan 15", ML + 14, y + 27);
-      y += 44;
+      // Single clean quarterly payment line — no callout box
+      y += 4;
+      checkPage(20);
+      f("normal", 9); tc(MGRAY);
+      t("Estimated quarterly payment:", ML + 6, y);
+      f("bold", 9); tc(STEEL);
+      t(fmt(m.totalTax / 4), ML + 148, y);
+      f("normal", 9); tc(MGRAY);
+      t("  ·  Due: Q1 Apr 15  ·  Q2 Jun 15  ·  Q3 Sep 15  ·  Q4 Jan 15", ML + 178, y);
+      y += 16;
 
-      // ── PAGE 2: Quarterly Breakdown ──
-      // Always start quarterly on a fresh page for clean layout
+      // ════════════════════════════════════════
+      // PAGE 2 — Quarterly Breakdown
+      // ════════════════════════════════════════
       newPage();
 
-      f("bold", 18); tc(NAVY);
+      f("bold", 16); tc(NAVY);
       t("Quarterly Breakdown", ML, y);
       y += 5;
       hline(y, NAVY, 1.5);
-      y += 12;
+      y += 11;
       f("normal", 9); tc(MGRAY);
       t(`${BIZ.name}  ·  ${year} Annual Tax Summary`, ML, y);
-      y += 18;
+      y += 16;
 
-      // Each quarter block — tightened spacing
+      // Quarter blocks
       quarters.forEach((q) => {
         const qm = q.metrics;
-        checkPage(108);
+        checkPage(104);
 
+        // Navy quarter header bar
         fc(NAVY); dc(NAVY);
-        doc.rect(ML, y, colR - ML, 20, "F");
-        f("bold", 11); tc(WHITE);
-        t(q.label, ML + 10, y + 14);
-        f("normal", 9); tc([147, 197, 253]);
-        t(q.period, ML + 38, y + 14);
-        t(`Est. due: ${q.due}  ·  ${q.jobs.length} jobs  ·  ${q.expenses.length} expenses`, colR - 8, y + 14, { align: "right" });
-        y += 24;
+        doc.rect(ML, y, colR - ML, 19, "F");
+        f("bold", 10); tc(WHITE);
+        t(q.label, ML + 10, y + 13);
+        f("normal", 8); tc([147, 197, 253]);
+        t(q.period, ML + 36, y + 13);
+        t(`Est. due: ${q.due}  ·  ${q.jobs.length} job${q.jobs.length !== 1 ? "s" : ""}  ·  ${q.expenses.length} expense${q.expenses.length !== 1 ? "s" : ""}`, colR - 8, y + 13, { align: "right" });
+        y += 23;
 
         row("Gross Revenue",     fmt(qm.revenue),                   { indent: 8, rule: true, color: BLACK });
         row("Business Expenses", fmt(qm.expTotal),                  { indent: 8, rule: true, color: BLACK });
         row("Mileage",           `${qm.miles.toLocaleString()} mi`, { indent: 8, rule: true, color: DGRAY });
         row("Net Profit",        fmt(qm.netProfit),                 { indent: 8, rule: true, bold: true, color: qm.netProfit >= 0 ? GREEN : RED });
         row("Tax Estimate",      fmt(qm.totalTax),                  { indent: 8, rule: true, bold: true, color: STEEL });
-        y += 8;
+        y += 7;
       });
 
-      // Full year totals grid — keep together, force new page if not enough room
-      const gridHeight = 120; // section head + col header + 4 rows
-      checkPage(gridHeight);
-
+      // Full Year Totals grid — keep together
+      checkPage(110);
       y += 4;
       sectionHead("Full Year Totals");
       y += 4;
@@ -306,44 +327,47 @@ export default function Export({ data }) {
         ["Net Profit", quarters.map(q => fmt(q.metrics.netProfit)), STEEL],
         ["Tax Est.",   quarters.map(q => fmt(q.metrics.totalTax)),  DGRAY],
       ].forEach(([label, vals, color], ri) => {
-        // No checkPage here — we already ensured space above
-        if (ri % 2 === 0) { fc(XLGRAY); dc(XLGRAY); doc.rect(ML, y - 12, colR - ML, 17, "F"); }
+        if (ri % 2 === 0) { fc(XLGRAY); dc(XLGRAY); doc.rect(ML, y - 11, colR - ML, 16, "F"); }
         f("normal", 10); tc(DGRAY);
         t(label, qCols[0], y);
         f("bold", 10); tc(color);
         vals.forEach((v, i) => t(v, qCols[i + 1], y, { align: "right" }));
         hline(y + 4, LGRAY, 0.3);
-        y += 17;
+        y += 16;
       });
 
-      // ── Expenses + Mileage — continue on same page if room, else new page ──
-      const expMilHeight = 60 + (expensesByCategory.length * 18) + 120;
-      checkPage(expMilHeight);
+      // ════════════════════════════════════════
+      // PAGE 3 — Expenses + Mileage
+      // (continues on same page if room, else new page)
+      // ════════════════════════════════════════
+      const expMilNeeded = 80
+        + Math.max(expensesByCategory.length, 1) * 17
+        + 130;
+      checkPage(expMilNeeded);
 
-      // If we just started a new page from checkPage, add the page header
-      // Otherwise just add some breathing room
-      y += 16;
-      f("bold", 18); tc(NAVY);
+      y += 14;
+      f("bold", 16); tc(NAVY);
       t("Business Expenses & Mileage", ML, y);
       y += 5;
       hline(y, NAVY, 1.5);
-      y += 12;
+      y += 11;
       f("normal", 9); tc(MGRAY);
       t(`${BIZ.name}  ·  ${year} Annual Tax Summary`, ML, y);
-      y += 18;
+      y += 16;
 
+      // Expenses by category
       sectionHead("Business Expenses by Category");
       colHeader(["CATEGORY", "% OF TOTAL", "AMOUNT"], [ML + 8, colR - 80, colR]);
 
       if (expensesByCategory.length === 0) {
         f("normal", 10); tc(MGRAY);
         t(`No expenses recorded for ${year}.`, ML + 8, y);
-        y += 18;
+        y += 16;
       } else {
         expensesByCategory.forEach(([cat, total], i) => {
           checkPage(18);
           const pct = m.expTotal > 0 ? (total / m.expTotal * 100).toFixed(1) : "0.0";
-          if (i % 2 === 0) { fc(XLGRAY); dc(XLGRAY); doc.rect(ML, y - 12, colR - ML, 17, "F"); }
+          if (i % 2 === 0) { fc(XLGRAY); dc(XLGRAY); doc.rect(ML, y - 11, colR - ML, 16, "F"); }
           f("normal", 10); tc(DGRAY);
           t(cat, ML + 8, y);
           tc(MGRAY);
@@ -351,13 +375,14 @@ export default function Export({ data }) {
           tc(BLACK);
           t(fmt(total), colR, y, { align: "right" });
           hline(y + 4, LGRAY, 0.3);
-          y += 17;
+          y += 16;
         });
         y += 4;
         totalRow("Total Business Expenses", fmt(m.expTotal), RED);
       }
 
-      y += 10;
+      // Mileage summary
+      y += 6;
       sectionHead("Mileage Log Summary");
       colHeader(["DESCRIPTION", "VALUE"], [ML + 8, colR]);
 
@@ -366,31 +391,31 @@ export default function Export({ data }) {
         ["Total Miles Driven",        `${m.miles.toLocaleString()} miles`],
         ["IRS Standard Rate Applied", `$${mileageRate} per mile`],
       ].forEach(([label, val], i) => {
-        if (i % 2 === 0) { fc(XLGRAY); dc(XLGRAY); doc.rect(ML, y - 12, colR - ML, 17, "F"); }
+        if (i % 2 === 0) { fc(XLGRAY); dc(XLGRAY); doc.rect(ML, y - 11, colR - ML, 16, "F"); }
         row(label, val, { indent: 8, rule: true, color: BLACK });
       });
       y += 4;
       totalRow("Total Mileage Deduction", fmt(m.mileDeduct), RED);
 
-      y += 16;
-      checkPage(36);
-      fc([239, 246, 255]); dc(LGRAY, 0.5);
-      doc.rect(ML, y, colR - ML, 34, "FD");
+      // Disclaimer
+      y += 14;
+      checkPage(32);
+      hline(y, LGRAY, 0.3);
+      y += 10;
       f("normal", 8); tc(MGRAY);
-      t("This report is generated from internal business records and contains estimates only.", pageW / 2, y + 12, { align: "center" });
-      t("All figures should be reviewed by a licensed tax professional before filing.",        pageW / 2, y + 24, { align: "center" });
-      y += 40;
+      t("This report is generated from internal business records and contains estimates only. All figures should be reviewed by a licensed tax professional before filing.", ML, y);
+      y += 12;
 
       // ── Footer on every page ──
       const pageCount = doc.internal.getNumberOfPages();
       for (let p = 1; p <= pageCount; p++) {
         doc.setPage(p);
         fc(NAVY); dc(NAVY);
-        doc.rect(0, pageH - 28, pageW, 28, "F");
+        doc.rect(0, pageH - 26, pageW, 26, "F");
         f("normal", 8); tc([147, 197, 253]);
-        t(BIZ.name,                    ML,        pageH - 10);
-        t(`${year} Annual Tax Summary`, pageW / 2, pageH - 10, { align: "center" });
-        t(`Page ${p} of ${pageCount}`, colR,      pageH - 10, { align: "right" });
+        t(BIZ.name,                    ML,        pageH - 9);
+        t(`${year} Annual Tax Summary`, pageW / 2, pageH - 9, { align: "center" });
+        t(`Page ${p} of ${pageCount}`, colR,      pageH - 9, { align: "right" });
       }
 
       const blob = doc.output("blob");
@@ -434,7 +459,7 @@ export default function Export({ data }) {
         <button onClick={() => { setYear(y => y + 1); setPdfReady(false); }} style={{ ...S.btnSecondary, padding: "8px 14px" }}>→</button>
       </div>
 
-      {/* Quarterly cards — all same navy accent */}
+      {/* Quarterly cards */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
         {quarters.map((q) => {
           const m = q.metrics;
