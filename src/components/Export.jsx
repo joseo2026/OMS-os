@@ -53,6 +53,7 @@ export default function Export({ data }) {
   const { mileageRate, seTaxRate, fedTaxRate } = getAppSettings();
   const [year, setYear] = useState(new Date().getFullYear());
   const [printing, setPrinting] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   const allJobs     = data.jobs     || [];
   const allExpenses = data.expenses || [];
@@ -78,21 +79,67 @@ export default function Export({ data }) {
   const expensesByCategory = useMemo(() =>
     groupExpensesByCategory(annual.expenses), [annual.expenses]);
 
-  function openReport() {
-    setPrinting(true);
+  async function handleShare() {
+    setSharing(true);
+    try {
+      // Build plain text summary for sharing
+      const m = annual.metrics;
+      const text = [
+        `OCASIO MECHANICAL SERVICES LLC`,
+        `${year} Annual Tax Summary`,
+        `Generated: ${new Date().toLocaleDateString()}`,
+        ``,
+        `── ANNUAL SUMMARY ──`,
+        `Gross Revenue:        ${fmt(m.revenue)}`,
+        `Total Expenses:       ${fmt(m.expTotal)}`,
+        `Mileage Deduction:    ${fmt(m.mileDeduct)} (${m.miles} mi @ $${mileageRate})`,
+        `Net Profit:           ${fmt(m.netProfit)}`,
+        `SE Tax (15.3%):       ${fmt(m.seTax)}`,
+        `Federal Tax Est.:     ${fmt(m.fedTax)}`,
+        `Total Tax Liability:  ${fmt(m.totalTax)}`,
+        `Quarterly Payment:    ${fmt(m.totalTax / 4)}`,
+        ``,
+        `── QUARTERLY ──`,
+        ...quarters.map(q =>
+          `${q.label} (${q.period}): Rev ${fmt(q.metrics.revenue)} · Exp ${fmt(q.metrics.expTotal)} · Profit ${fmt(q.metrics.netProfit)} · Tax ${fmt(q.metrics.totalTax)}`
+        ),
+        ``,
+        `── EXPENSES BY CATEGORY ──`,
+        ...expensesByCategory.map(([cat, total]) => `${cat}: ${fmt(total)}`),
+        ``,
+        `── MILEAGE ──`,
+        `Total Trips: ${annual.mileage.length}`,
+        `Total Miles: ${m.miles.toLocaleString()}`,
+        `Deduction:   ${fmt(m.mileDeduct)}`,
+        ``,
+        `Tax rates used: SE ${(seTaxRate*100).toFixed(1)}% · Federal ${(fedTaxRate*100).toFixed(1)}% · Mileage $${mileageRate}/mi`,
+        `Estimates only. Consult a licensed tax professional.`,
+      ].join("\n");
+
+      if (navigator.share) {
+        await navigator.share({
+          title: `OMS ${year} Annual Tax Summary`,
+          text,
+        });
+      } else {
+        // Fallback — copy to clipboard
+        await navigator.clipboard.writeText(text);
+        alert("Report copied to clipboard.");
+      }
+    } catch (e) {
+      if (e.name !== "AbortError") alert("Share failed: " + e.message);
+    }
+    setSharing(false);
   }
 
   const qColors = [C.accent, "#10b981", "#f59e0b", "#8b5cf6"];
   const hasData = annual.jobs.length > 0 || annual.expenses.length > 0 || annual.mileage.length > 0;
 
+  // All hardcoded — zero theme variables
   const P = {
-    h2:      { fontSize: 13, fontWeight: 700, color: "#1d4ed8", margin: "0 0 10px 0", paddingBottom: 5, borderBottom: "2px solid #1d4ed8", textTransform: "uppercase", letterSpacing: "0.05em" },
+    h2:      { fontSize: 12, fontWeight: 700, color: "#1d4ed8", margin: "0 0 10px 0", paddingBottom: 5, borderBottom: "2px solid #1d4ed8", textTransform: "uppercase", letterSpacing: "0.06em" },
     label:   { color: "#6b7280", fontSize: 12 },
     value:   { fontWeight: 600, fontSize: 13, color: "#111" },
-    green:   { color: "#15803d", fontWeight: 700 },
-    red:     { color: "#dc2626", fontWeight: 600 },
-    yellow:  { color: "#b45309", fontWeight: 700 },
-    blue:    { color: "#1d4ed8", fontWeight: 700 },
     card:    { background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: "14px 16px", marginBottom: 18 },
     row:     { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: "1px solid #f3f4f6" },
     rowLast: { display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 10 },
@@ -107,11 +154,10 @@ export default function Export({ data }) {
           body, html { background: #fff !important; margin: 0 !important; padding: 0 !important; }
           * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           .no-print { display: none !important; }
-          .print-root { display: block !important; position: static !important; overflow: visible !important; }
         }
       `}</style>
 
-      {/* ── App UI (hidden when report is open) ── */}
+      {/* ── App UI ── */}
       {!printing && (
         <div>
           {/* Year selector */}
@@ -140,9 +186,9 @@ export default function Export({ data }) {
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     {[
-                      ["Revenue",    fmt(m.revenue),    C.green],
-                      ["Expenses",   fmt(m.expTotal),   C.red],
-                      ["Mileage",    `${m.miles} mi`,   C.textSecondary],
+                      ["Revenue",  fmt(m.revenue),  C.green],
+                      ["Expenses", fmt(m.expTotal),  C.red],
+                      ["Mileage",  `${m.miles} mi`,  C.textSecondary],
                     ].map(([l, v, c]) => (
                       <div key={l} style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
                         <span style={{ color: C.textSecondary }}>{l}</span>
@@ -188,17 +234,24 @@ export default function Export({ data }) {
             </div>
           </div>
 
-          {/* Export button */}
+          {/* Export buttons */}
           <div style={{ ...S.card, marginBottom: 24 }}>
             <div style={S.cardTitle}>Export</div>
             <button
-              style={{ ...S.btnPrimary, width: "100%", padding: "14px 0", fontSize: 14, marginBottom: 8 }}
-              onClick={openReport}
+              style={{ ...S.btnPrimary, width: "100%", padding: "14px 0", fontSize: 14, marginBottom: 10 }}
+              onClick={() => setPrinting(true)}
             >
               {`View ${year} Annual Report`}
             </button>
-            <div style={{ fontSize: 11, color: C.textMuted, textAlign: "center" }}>
-              Opens full report → use Share ↗ to save as PDF
+            <button
+              style={{ ...S.btnSecondary, width: "100%", padding: "12px 0", fontSize: 13 }}
+              onClick={handleShare}
+              disabled={sharing}
+            >
+              {sharing ? "Sharing..." : `Share ${year} Summary`}
+            </button>
+            <div style={{ fontSize: 11, color: C.textMuted, textAlign: "center", marginTop: 8 }}>
+              View opens the full report · Share sends a text summary
             </div>
             {!hasData && (
               <div style={{ fontSize: 11, color: C.textMuted, marginTop: 8, textAlign: "center" }}>
@@ -209,69 +262,74 @@ export default function Export({ data }) {
         </div>
       )}
 
-      {/* ── PDF Report — renders in place, full scroll, no fixed overlay ── */}
+      {/* ── Full Report View ── */}
       {printing && (
         <div
-          className="print-root"
           style={{
             background: "#fff",
             color: "#111",
             fontFamily: "Georgia, 'Times New Roman', serif",
             fontSize: 13,
             lineHeight: 1.7,
-            padding: "24px 20px",
+            padding: "16px 16px 40px",
             minHeight: "100vh",
           }}
         >
-          {/* Close button — top of screen, hidden when printing */}
-          <div className="no-print" style={{ marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          {/* Top bar */}
+          <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 12, borderBottom: "1px solid #e5e7eb" }}>
             <button
               onClick={() => setPrinting(false)}
-              style={{ background: "#f3f4f6", border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 13, color: "#374151", cursor: "pointer" }}
+              style={{ background: "#f3f4f6", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, color: "#374151", cursor: "pointer", fontWeight: 600 }}
             >
               ← Back
             </button>
-            <div style={{ fontSize: 12, color: "#6b7280" }}>
-              Share ↗ → Print → Save to Files
-            </div>
+            <button
+              onClick={handleShare}
+              disabled={sharing}
+              style={{ background: "#1d4ed8", border: "none", borderRadius: 8, padding: "8px 18px", fontSize: 13, color: "#fff", cursor: "pointer", fontWeight: 600 }}
+            >
+              {sharing ? "..." : "Share ↗"}
+            </button>
           </div>
 
           {/* Header */}
-          <div style={{ borderBottom: "3px solid #1d4ed8", paddingBottom: 20, marginBottom: 24 }}>
+          <div style={{ borderBottom: "3px solid #1d4ed8", paddingBottom: 16, marginBottom: 20 }}>
             <div style={{ fontSize: 22, fontWeight: 700, color: "#111", letterSpacing: "-0.5px" }}>OCASIO</div>
-            <div style={{ fontSize: 11, color: "#6b7280", letterSpacing: "0.12em", textTransform: "uppercase" }}>Mechanical Services LLC</div>
-            <div style={{ marginTop: 8, fontSize: 12, color: "#6b7280", lineHeight: 1.8 }}>
+            <div style={{ fontSize: 10, color: "#6b7280", letterSpacing: "0.12em", textTransform: "uppercase" }}>Mechanical Services LLC</div>
+            <div style={{ marginTop: 6, fontSize: 11, color: "#6b7280", lineHeight: 1.7 }}>
               {BIZ.address} · {BIZ.city}<br/>
               {BIZ.phone} · {BIZ.email}
             </div>
             <div style={{ marginTop: 10, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
               <div>
-                <div style={{ fontSize: 11, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.1em" }}>Annual Tax Summary</div>
-                <div style={{ fontSize: 32, fontWeight: 700, color: "#1d4ed8", lineHeight: 1.1 }}>{year}</div>
+                <div style={{ fontSize: 10, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.1em" }}>Annual Tax Summary</div>
+                <div style={{ fontSize: 30, fontWeight: 700, color: "#1d4ed8", lineHeight: 1.1 }}>{year}</div>
               </div>
               <div style={{ textAlign: "right", fontSize: 11, color: "#9ca3af" }}>
                 {annual.jobs.length} jobs completed<br/>
-                Generated {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
               </div>
             </div>
           </div>
 
-          {/* Tax settings */}
+          {/* Tax settings — table layout for reliable alignment */}
           <div style={P.section}>
             <div style={P.h2}>Tax Rate Settings Used</div>
-            <div style={{ ...P.card, display: "flex", justifyContent: "space-around", textAlign: "center" }}>
-              <div>
-                <div style={P.label}>Self-Employment Tax</div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: "#1d4ed8" }}>{(seTaxRate * 100).toFixed(1)}%</div>
-              </div>
-              <div style={{ borderLeft: "1px solid #e5e7eb", borderRight: "1px solid #e5e7eb", padding: "0 20px" }}>
-                <div style={P.label}>Federal Income Tax</div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: "#1d4ed8" }}>{(fedTaxRate * 100).toFixed(1)}%</div>
-              </div>
-              <div>
-                <div style={P.label}>IRS Mileage Rate</div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: "#1d4ed8" }}>${mileageRate}/mi</div>
-              </div>
+            <div style={P.card}>
+              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "center" }}>
+                <tbody>
+                  <tr>
+                    <td style={{ padding: "4px 0", fontSize: 11, color: "#6b7280", width: "33%" }}>Self-Employment Tax</td>
+                    <td style={{ padding: "4px 0", fontSize: 11, color: "#6b7280", width: "34%", borderLeft: "1px solid #e5e7eb", borderRight: "1px solid #e5e7eb" }}>Federal Income Tax</td>
+                    <td style={{ padding: "4px 0", fontSize: 11, color: "#6b7280", width: "33%" }}>IRS Mileage Rate</td>
+                  </tr>
+                  <tr>
+                    <td style={{ fontSize: 20, fontWeight: 700, color: "#1d4ed8", paddingBottom: 4 }}>{(seTaxRate * 100).toFixed(1)}%</td>
+                    <td style={{ fontSize: 20, fontWeight: 700, color: "#1d4ed8", paddingBottom: 4, borderLeft: "1px solid #e5e7eb", borderRight: "1px solid #e5e7eb" }}>{(fedTaxRate * 100).toFixed(1)}%</td>
+                    <td style={{ fontSize: 20, fontWeight: 700, color: "#1d4ed8", paddingBottom: 4 }}>${mileageRate}/mi</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -280,9 +338,9 @@ export default function Export({ data }) {
             <div style={P.h2}>Annual Financial Summary</div>
             <div style={P.card}>
               {[
-                ["Gross Revenue",                                                                        fmt(annual.metrics.revenue),    "#15803d"],
-                ["Total Business Expenses",                                                              fmt(annual.metrics.expTotal),   "#dc2626"],
-                [`Mileage Deduction (${annual.metrics.miles.toLocaleString()} mi × $${mileageRate})`,   fmt(annual.metrics.mileDeduct), "#dc2626"],
+                ["Gross Revenue",                                                                       fmt(annual.metrics.revenue),    "#15803d"],
+                ["Total Business Expenses",                                                             fmt(annual.metrics.expTotal),   "#dc2626"],
+                [`Mileage Deduction (${annual.metrics.miles.toLocaleString()} mi × $${mileageRate})`,  fmt(annual.metrics.mileDeduct), "#dc2626"],
               ].map(([label, value, color]) => (
                 <div key={label} style={P.row}>
                   <span style={P.label}>{label}</span>
@@ -297,7 +355,7 @@ export default function Export({ data }) {
               </div>
               <div style={{ height: 6 }} />
               {[
-                ["Self-Employment Tax (15.3% × 92.35%)", fmt(annual.metrics.seTax), "#b45309"],
+                ["Self-Employment Tax (15.3% × 92.35%)", fmt(annual.metrics.seTax),  "#b45309"],
                 ["Federal Income Tax Estimate",          fmt(annual.metrics.fedTax), "#b45309"],
               ].map(([label, value, color]) => (
                 <div key={label} style={P.row}>
@@ -310,15 +368,15 @@ export default function Export({ data }) {
                 <span style={{ fontSize: 18, fontWeight: 700, color: "#1d4ed8" }}>{fmt(annual.metrics.totalTax)}</span>
               </div>
               <div style={{ marginTop: 12, padding: "10px 14px", background: "#eff6ff", borderRadius: 6, fontSize: 12, color: "#1d4ed8", lineHeight: 1.7 }}>
-                Quarterly payment: <strong>{fmt(annual.metrics.totalTax / 4)}</strong>
-                <br/>Due: Q1 Apr 15 · Q2 Jun 15 · Q3 Sep 15 · Q4 Jan 15
+                Quarterly payment: <strong>{fmt(annual.metrics.totalTax / 4)}</strong><br/>
+                Due: Q1 Apr 15 · Q2 Jun 15 · Q3 Sep 15 · Q4 Jan 15
               </div>
             </div>
           </div>
 
           <div style={P.divider} />
 
-          {/* Quarterly breakdown */}
+          {/* Quarterly breakdown — stacked for mobile readability */}
           <div style={P.section}>
             <div style={P.h2}>Quarterly Breakdown</div>
             {quarters.map((q, i) => {
@@ -331,20 +389,24 @@ export default function Export({ data }) {
                       <span style={{ fontSize: 15, fontWeight: 700, color: qColor }}>{q.label}</span>
                       <span style={{ fontSize: 11, color: "#6b7280", marginLeft: 8 }}>{q.period}</span>
                     </div>
-                    <div style={{ fontSize: 11, color: "#6b7280" }}>Est. due {q.due}</div>
+                    <div style={{ fontSize: 11, color: "#6b7280" }}>Due {q.due}</div>
                   </div>
-                  {[
-                    ["Revenue",    fmt(m.revenue),    "#15803d"],
-                    ["Expenses",   fmt(m.expTotal),   "#dc2626"],
-                    ["Mileage",    `${m.miles.toLocaleString()} mi`, "#6b7280"],
-                    ["Net Profit", fmt(m.netProfit),  m.netProfit >= 0 ? "#15803d" : "#dc2626"],
-                    ["Tax Est.",   fmt(m.totalTax),   "#b45309"],
-                  ].map(([label, value, color]) => (
-                    <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid #f3f4f6" }}>
-                      <span style={{ fontSize: 12, color: "#6b7280" }}>{label}</span>
-                      <span style={{ fontSize: 12, fontWeight: 600, color }}>{value}</span>
-                    </div>
-                  ))}
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <tbody>
+                      {[
+                        ["Revenue",    fmt(m.revenue),    "#15803d"],
+                        ["Expenses",   fmt(m.expTotal),   "#dc2626"],
+                        ["Mileage",    `${m.miles.toLocaleString()} mi`, "#6b7280"],
+                        ["Net Profit", fmt(m.netProfit),  m.netProfit >= 0 ? "#15803d" : "#dc2626"],
+                        ["Tax Est.",   fmt(m.totalTax),   "#b45309"],
+                      ].map(([label, value, color]) => (
+                        <tr key={label}>
+                          <td style={{ fontSize: 12, color: "#6b7280", padding: "5px 0", borderBottom: "1px solid #f3f4f6" }}>{label}</td>
+                          <td style={{ fontSize: 12, fontWeight: 600, color, padding: "5px 0", borderBottom: "1px solid #f3f4f6", textAlign: "right" }}>{value}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                   <div style={{ marginTop: 8, fontSize: 11, color: "#9ca3af" }}>
                     {q.jobs.length} job{q.jobs.length !== 1 ? "s" : ""} · {q.expenses.length} expense{q.expenses.length !== 1 ? "s" : ""} · {q.mileage.length} trip{q.mileage.length !== 1 ? "s" : ""}
                   </div>
@@ -366,10 +428,10 @@ export default function Export({ data }) {
                   const pct = annual.metrics.expTotal > 0 ? (total / annual.metrics.expTotal * 100).toFixed(1) : "0.0";
                   const barWidth = annual.metrics.expTotal > 0 ? (total / annual.metrics.expTotal * 100) : 0;
                   return (
-                    <div key={cat} style={{ marginBottom: i === expensesByCategory.length - 1 ? 0 : 12 }}>
+                    <div key={cat} style={{ marginBottom: i === expensesByCategory.length - 1 ? 0 : 14 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                         <span style={P.label}>{cat}</span>
-                        <div style={{ display: "flex", gap: 10 }}>
+                        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                           <span style={{ fontSize: 11, color: "#9ca3af" }}>{pct}%</span>
                           <span style={{ fontWeight: 600, color: "#dc2626" }}>{fmt(total)}</span>
                         </div>
@@ -388,41 +450,50 @@ export default function Export({ data }) {
             )}
           </div>
 
-          {/* Mileage summary */}
+          {/* Mileage */}
           <div style={P.section}>
             <div style={P.h2}>Mileage Log Summary</div>
             <div style={P.card}>
-              {[
-                ["Total Trips Logged",      annual.mileage.length.toString(),                  "#111"],
-                ["Total Miles Driven",      `${annual.metrics.miles.toLocaleString()} miles`,  "#111"],
-                ["IRS Rate Applied",        `$${mileageRate} per mile`,                        "#111"],
-                ["Total Mileage Deduction", fmt(annual.metrics.mileDeduct),                    "#dc2626"],
-              ].map(([label, value, color], i) => (
-                <div key={label} style={{ ...P.row, borderBottom: i === 3 ? "none" : "1px solid #f3f4f6" }}>
-                  <span style={P.label}>{label}</span>
-                  <span style={{ fontWeight: 600, color }}>{value}</span>
-                </div>
-              ))}
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <tbody>
+                  {[
+                    ["Total Trips Logged",      annual.mileage.length.toString(),                 "#111"],
+                    ["Total Miles Driven",      `${annual.metrics.miles.toLocaleString()} miles`, "#111"],
+                    ["IRS Rate Applied",        `$${mileageRate} per mile`,                       "#111"],
+                    ["Total Mileage Deduction", fmt(annual.metrics.mileDeduct),                   "#dc2626"],
+                  ].map(([label, value, color], i) => (
+                    <tr key={label}>
+                      <td style={{ fontSize: 12, color: "#6b7280", padding: "7px 0", borderBottom: i === 3 ? "none" : "1px solid #f3f4f6" }}>{label}</td>
+                      <td style={{ fontSize: 13, fontWeight: 600, color, padding: "7px 0", borderBottom: i === 3 ? "none" : "1px solid #f3f4f6", textAlign: "right" }}>{value}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
 
           {/* Footer */}
           <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 14, fontSize: 11, color: "#9ca3af", textAlign: "center", lineHeight: 1.8, marginBottom: 24 }}>
-            <div style={{ fontWeight: 600, color: "#6b7280", marginBottom: 4 }}>{BIZ.name} · {BIZ.address}, {BIZ.city}</div>
-            <div>{BIZ.phone} · {BIZ.email}</div>
-            <div style={{ marginTop: 6 }}>
-              Estimates only — review with a licensed tax professional before filing.
-            </div>
-            <div>{year} Annual Tax Summary · Generated {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</div>
+            <div style={{ fontWeight: 600, color: "#6b7280", marginBottom: 2 }}>{BIZ.name}</div>
+            <div>{BIZ.address}, {BIZ.city} · {BIZ.phone} · {BIZ.email}</div>
+            <div style={{ marginTop: 6 }}>Estimates only — review with a licensed tax professional before filing.</div>
+            <div>{year} Annual Tax Summary · {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</div>
           </div>
 
-          {/* Bottom close button */}
-          <div className="no-print" style={{ textAlign: "center", paddingBottom: 40 }}>
+          {/* Bottom share + close */}
+          <div className="no-print" style={{ display: "flex", gap: 12, paddingBottom: 40 }}>
             <button
               onClick={() => setPrinting(false)}
-              style={{ background: "#1d4ed8", border: "none", borderRadius: 8, padding: "12px 36px", color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+              style={{ flex: 1, background: "#f3f4f6", border: "none", borderRadius: 8, padding: "12px 0", fontSize: 13, color: "#374151", cursor: "pointer", fontWeight: 600 }}
             >
-              Close Report
+              ← Back
+            </button>
+            <button
+              onClick={handleShare}
+              disabled={sharing}
+              style={{ flex: 2, background: "#1d4ed8", border: "none", borderRadius: 8, padding: "12px 0", fontSize: 13, color: "#fff", cursor: "pointer", fontWeight: 600 }}
+            >
+              {sharing ? "Sharing..." : "Share / Save ↗"}
             </button>
           </div>
 
