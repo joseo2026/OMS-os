@@ -1,11 +1,11 @@
 // styles.js
-// Stripe-inspired palette · SF Pro on iPhone · Inter fallback
+// Stripe-inspired palette · Roboto · SF Pro fallback on iPhone
 
 export const DARK = {
   bg:          "#000000",   // pure black — iOS Stocks
   surface:     "#1c1c1e",   // iOS elevated surface
   elevated:    "#2c2c2e",   // Shortcuts card background
-  border:      "#3a3a3c",   // subtle separator — bumped up
+  border:      "#3a3a3c",   // subtle separator
   borderLight: "#545458",   // more visible border
   accent:      "#636af7",   // Stripe electric blue-purple
   accentDim:   "#4f56d9",   // pressed/dimmed accent
@@ -13,8 +13,8 @@ export const DARK = {
   red:         "#ff453a",   // iOS system red
   yellow:      "#ffd60a",   // iOS system yellow
   textPrimary:   "#ffffff", // pure white
-  textSecondary: "#aeaeb2", // was #8e8e93 — now readable on black
-  textMuted:     "#6d6d72", // was #48484a — was invisible, now visible
+  textSecondary: "#aeaeb2", // readable on black
+  textMuted:     "#6d6d72", // visible on black
 };
 
 export const LIGHT = {
@@ -33,7 +33,7 @@ export const LIGHT = {
   textMuted:     "#8898aa", // Stripe muted text
 };
 
-const FONT = "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif";
+const FONT = "'Roboto', -apple-system, BlinkMacSystemFont, sans-serif";
 
 export function makeStyles(C) {
   return {
@@ -106,7 +106,7 @@ export function makeStyles(C) {
     label: {
       display:       "block",
       fontSize:      11,
-      color:         C.textSecondary,  // bumped from textMuted — labels need to be readable
+      color:         C.textSecondary,
       marginBottom:  5,
       textTransform: "uppercase",
       letterSpacing: "0.08em",
@@ -158,7 +158,7 @@ export function makeStyles(C) {
     },
     statLabel: {
       fontSize:      10,
-      color:         C.textSecondary,  // bumped from textMuted
+      color:         C.textSecondary,
       letterSpacing: "0.12em",
       textTransform: "uppercase",
       marginBottom:  4,
