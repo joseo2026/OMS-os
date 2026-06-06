@@ -12,9 +12,9 @@ export const DARK = {
   green:       "#30d158",   // iOS system green
   red:         "#ff453a",   // iOS system red
   yellow:      "#ffd60a",   // iOS system yellow
-  textPrimary:   "#ededed", // Vercel near-white — clean, not harsh
-  textSecondary: "#888888", // Vercel mid gray — readable
-  textMuted:     "#444444", // Vercel subtle gray
+  textPrimary:   "#ededed", // Vercel near-white
+  textSecondary: "#aaaaaa", // bumped from #888 — readable gray
+  textMuted:     "#888888", // bumped from #444 — no longer invisible
 };
 
 export const LIGHT = {
@@ -40,7 +40,7 @@ const LIGHT_SHADOW = "0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05)";
 
 export function makeStyles(C, isDark = true) {
   const shadow     = isDark ? DARK_SHADOW : LIGHT_SHADOW;
-  const cardBorder = isDark ? `1px solid ${C.border}` : `1px solid ${C.border}`;
+  const cardBorder = `1px solid ${C.border}`;
 
   return {
     app: {
@@ -67,7 +67,7 @@ export function makeStyles(C, isDark = true) {
       background:    "none",
       border:        "none",
       borderBottom:  active ? `2px solid ${C.accent}` : "2px solid transparent",
-      color:         active ? C.accent : C.textMuted,
+      color:         active ? C.accent : C.textSecondary,
       cursor:        "pointer",
       fontSize:      10,
       letterSpacing: "0.08em",
