@@ -5,16 +5,16 @@ export const DARK = {
   bg:          "#000000",   // pure black — iOS Stocks
   surface:     "#1c1c1e",   // iOS elevated surface
   elevated:    "#2c2c2e",   // Shortcuts card background
-  border:      "#38383a",   // subtle separator
-  borderLight: "#48484a",   // slightly more visible
+  border:      "#3a3a3c",   // subtle separator — bumped up
+  borderLight: "#545458",   // more visible border
   accent:      "#636af7",   // Stripe electric blue-purple
   accentDim:   "#4f56d9",   // pressed/dimmed accent
   green:       "#30d158",   // iOS system green
   red:         "#ff453a",   // iOS system red
   yellow:      "#ffd60a",   // iOS system yellow
   textPrimary:   "#ffffff", // pure white
-  textSecondary: "#8e8e93", // iOS secondary label
-  textMuted:     "#48484a", // iOS tertiary label
+  textSecondary: "#aeaeb2", // was #8e8e93 — now readable on black
+  textMuted:     "#6d6d72", // was #48484a — was invisible, now visible
 };
 
 export const LIGHT = {
@@ -47,13 +47,13 @@ export function makeStyles(C) {
       paddingRight:  "env(safe-area-inset-right)",
     },
     header: {
-      background:      C.surface,
-      borderBottom:    `1px solid ${C.border}`,
-      padding:         "14px 20px",
-      paddingTop:      "calc(env(safe-area-inset-top) + 4px)",
-      display:         "flex",
-      justifyContent:  "space-between",
-      alignItems:      "center",
+      background:     C.surface,
+      borderBottom:   `1px solid ${C.border}`,
+      padding:        "14px 20px",
+      paddingTop:     "calc(env(safe-area-inset-top) + 4px)",
+      display:        "flex",
+      justifyContent: "space-between",
+      alignItems:     "center",
     },
     nav: { display: "none" },
     navBtn: (active) => ({
@@ -71,9 +71,9 @@ export function makeStyles(C) {
       transition:    "all 0.15s",
     }),
     content: {
-      padding:   "20px",
-      maxWidth:  900,
-      margin:    "0 auto",
+      padding:  "20px",
+      maxWidth: 900,
+      margin:   "0 auto",
     },
     card: {
       background:   C.surface,
@@ -106,7 +106,7 @@ export function makeStyles(C) {
     label: {
       display:       "block",
       fontSize:      11,
-      color:         C.textMuted,
+      color:         C.textSecondary,  // bumped from textMuted — labels need to be readable
       marginBottom:  5,
       textTransform: "uppercase",
       letterSpacing: "0.08em",
@@ -158,7 +158,7 @@ export function makeStyles(C) {
     },
     statLabel: {
       fontSize:      10,
-      color:         C.textMuted,
+      color:         C.textSecondary,  // bumped from textMuted
       letterSpacing: "0.12em",
       textTransform: "uppercase",
       marginBottom:  4,
@@ -170,15 +170,15 @@ export function makeStyles(C) {
       color:      C.textPrimary,
     },
     tag: (color) => ({
-      display:      "inline-block",
-      background:   color + "22",
-      color:        color,
-      border:       `1px solid ${color}44`,
-      borderRadius: 6,
-      padding:      "2px 8px",
-      fontSize:     10,
+      display:       "inline-block",
+      background:    color + "22",
+      color:         color,
+      border:        `1px solid ${color}44`,
+      borderRadius:  6,
+      padding:       "2px 8px",
+      fontSize:      10,
       letterSpacing: "0.08em",
-      fontWeight:   500,
+      fontWeight:    500,
     }),
     row: {
       display:        "flex",
