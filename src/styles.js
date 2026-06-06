@@ -1,20 +1,20 @@
 // styles.js
-// Dark: Reddit-inspired navy-tinted black · Light: Stripe · Helvetica Neue
+// Dark: Vercel-inspired pure black · Light: Stripe · Helvetica Neue
 
 export const DARK = {
-  bg:          "#0f1419",   // Reddit dark — navy-tinted black, warmer than pure black
-  surface:     "#1a1e23",   // card background — lifts naturally from bg
-  elevated:    "#252a30",   // inputs, nested elements
-  border:      "#2f3336",   // very subtle — used minimally
-  borderLight: "#3d4449",   // slightly more visible when needed
+  bg:          "#000000",   // pure black — Vercel
+  surface:     "#111111",   // card background — barely one step up
+  elevated:    "#1a1a1a",   // inputs, nested elements
+  border:      "#333333",   // visible but not aggressive
+  borderLight: "#444444",   // slightly more visible when needed
   accent:      "#636af7",   // blue-purple — used sparingly
   accentDim:   "#4f56d9",   // pressed/dimmed accent
   green:       "#30d158",   // iOS system green
   red:         "#ff453a",   // iOS system red
   yellow:      "#ffd60a",   // iOS system yellow
-  textPrimary:   "#f7f9f9", // Reddit near-white — softer than pure white
-  textSecondary: "#8b98a5", // Reddit metadata gray — readable, not harsh
-  textMuted:     "#536471", // Reddit timestamp gray — subtle
+  textPrimary:   "#ededed", // Vercel near-white — clean, not harsh
+  textSecondary: "#888888", // Vercel mid gray — readable
+  textMuted:     "#444444", // Vercel subtle gray
 };
 
 export const LIGHT = {
@@ -35,15 +35,12 @@ export const LIGHT = {
 
 const FONT = "'Helvetica Neue', Helvetica, Arial, sans-serif";
 
-// Dark mode card shadow — creates depth without borders
-const DARK_SHADOW = "0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3)";
+const DARK_SHADOW  = "0 1px 3px rgba(0,0,0,0.6), 0 1px 2px rgba(0,0,0,0.4)";
 const LIGHT_SHADOW = "0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05)";
 
 export function makeStyles(C, isDark = true) {
-  const shadow = isDark ? DARK_SHADOW : LIGHT_SHADOW;
-  // Dark mode — no borders, shadow creates depth
-  // Light mode — subtle border + shadow
-  const cardBorder = isDark ? "none" : `1px solid ${C.border}`;
+  const shadow     = isDark ? DARK_SHADOW : LIGHT_SHADOW;
+  const cardBorder = isDark ? `1px solid ${C.border}` : `1px solid ${C.border}`;
 
   return {
     app: {
@@ -57,8 +54,7 @@ export function makeStyles(C, isDark = true) {
     },
     header: {
       background:     C.surface,
-      borderBottom:   isDark ? "none" : `1px solid ${C.border}`,
-      boxShadow:      isDark ? "0 1px 0 rgba(255,255,255,0.04)" : LIGHT_SHADOW,
+      borderBottom:   `1px solid ${C.border}`,
       padding:        "12px 20px",
       paddingTop:     "calc(env(safe-area-inset-top) + 4px)",
       display:        "flex",
@@ -95,10 +91,10 @@ export function makeStyles(C, isDark = true) {
       boxShadow:    shadow,
     },
     cardTitle: {
-      fontSize:     13,
-      color:        C.textSecondary,
-      marginBottom: 12,
-      fontWeight:   600,
+      fontSize:      13,
+      color:         C.textSecondary,
+      marginBottom:  12,
+      fontWeight:    600,
       letterSpacing: 0,
       textTransform: "none",
     },
@@ -178,9 +174,9 @@ export function makeStyles(C, isDark = true) {
       letterSpacing: 0,
     },
     statValue: {
-      fontSize:   26,
-      fontWeight: 500,
-      color:      C.textPrimary,
+      fontSize:      26,
+      fontWeight:    500,
+      color:         C.textPrimary,
       letterSpacing: "-0.5px",
     },
     tag: (color) => ({
@@ -206,27 +202,25 @@ export function makeStyles(C, isDark = true) {
       alignItems:     "center",
       marginBottom:   14,
     },
-    // Section label — plain bold, no all-caps, no accent color
     sectionLabel: {
-      fontSize:   17,
-      fontWeight: 700,
-      color:      C.textPrimary,
+      fontSize:     17,
+      fontWeight:   700,
+      color:        C.textPrimary,
       marginBottom: 12,
     },
-    // Sub-navigation tabs — underline style
     subTab: (active) => ({
-      padding:       "10px 4px",
-      background:    "none",
-      border:        "none",
-      borderBottom:  active ? `2px solid ${C.accent}` : "2px solid transparent",
-      color:         active ? C.accent : C.textSecondary,
-      cursor:        "pointer",
-      fontSize:      13,
-      fontWeight:    active ? 600 : 400,
-      fontFamily:    "inherit",
-      whiteSpace:    "nowrap",
-      transition:    "all 0.15s",
-      marginRight:   20,
+      padding:      "10px 4px",
+      background:   "none",
+      border:       "none",
+      borderBottom: active ? `2px solid ${C.accent}` : "2px solid transparent",
+      color:        active ? C.accent : C.textSecondary,
+      cursor:       "pointer",
+      fontSize:     13,
+      fontWeight:   active ? 600 : 400,
+      fontFamily:   "inherit",
+      whiteSpace:   "nowrap",
+      transition:   "all 0.15s",
+      marginRight:  20,
     }),
   };
 }
