@@ -11,6 +11,9 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     localStorage.setItem("oms-theme", isDark ? "dark" : "light");
+    // Sync document background so no flash on load or theme switch
+    document.body.style.background = isDark ? DARK.bg : LIGHT.bg;
+    document.body.style.color      = isDark ? DARK.textPrimary : LIGHT.textPrimary;
   }, [isDark]);
 
   const C = isDark ? DARK : LIGHT;
