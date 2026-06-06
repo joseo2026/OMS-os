@@ -1,7 +1,6 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useTheme } from "../theme.jsx";
-import { fmt } from "../helpers.js";
-import { getAppSettings } from "./Settings.jsx";
+import { fmt, supabase } from "../helpers.js";
 
 const QUARTERS = [
   { label: "Q1", period: "Jan 1 – Mar 31", due: "Apr 15", from: (y) => `${y}-01-01`, to: (y) => `${y}-03-31` },
@@ -18,7 +17,6 @@ const BIZ = {
   email:   "jose@oms.com",
 };
 
-// ── Annual metrics — includes mileage deduction for CPA report ──
 function calcAnnualMetrics(jobs, expenses, mileage, mileageRate, seTaxRate, fedTaxRate) {
   const revenue    = jobs.reduce((s, j) => s + Number(j.grandTotal || j.grand_total || 0), 0);
   const expTotal   = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
@@ -32,15 +30,11 @@ function calcAnnualMetrics(jobs, expenses, mileage, mileageRate, seTaxRate, fedT
   return { revenue, expTotal, miles, mileDeduct, netProfit, seTax, fedTax, totalTax };
 }
 
-// ── Quarterly metrics — NO mileage deduction from tax calc ──
-// Each quarter stands alone. Mileage is tracked but not used to reduce tax estimate.
-// CPA claims mileage annually at filing. This prevents underestimating quarterly payments.
 function calcQuarterMetrics(jobs, expenses, mileage, mileageRate, seTaxRate, fedTaxRate) {
   const revenue   = jobs.reduce((s, j) => s + Number(j.grandTotal || j.grand_total || 0), 0);
   const expTotal  = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
   const miles     = mileage.reduce((s, m) => s + Number(String(m.miles || 0).replace(/,/g, "")), 0);
   const netProfit = revenue - expTotal;
-  // Tax on net profit only — no mileage deduction
   const seTax     = Math.max(0, netProfit) * 0.9235 * seTaxRate;
   const taxable   = Math.max(0, netProfit - seTax * 0.5);
   const fedTax    = taxable * fedTaxRate;
@@ -65,13 +59,19 @@ function groupExpensesByCategory(expenses) {
   return Object.entries(map).sort((a, b) => b[1] - a[1]);
 }
 
-export default function Export({ data }) {
+const DEFAULT_RATES = {
+  mileageRate: 0.725,
+  seTaxRate:   0.153,
+  fedTaxRate:  0.22,
+  salesTax:    0.07,
+};
+
+export default function Export({ data, year, onYearChange }) {
   const { C, S } = useTheme();
-  const { mileageRate, seTaxRate, fedTaxRate } = getAppSettings();
-  const [year, setYear] = useState(new Date().getFullYear());
   const [generating, setGenerating] = useState(false);
   const [pdfReady, setPdfReady] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [rates, setRates] = useState(DEFAULT_RATES);
   const pdfFileRef = useRef(null);
   const pdfBlobRef = useRef(null);
 
@@ -79,7 +79,51 @@ export default function Export({ data }) {
   const allExpenses = data.expenses || [];
   const allMileage  = data.mileage  || [];
 
-  // Quarters use quarterly calc — no mileage in tax estimate
+  // Load year-specific rates
+  useEffect(() => {
+    async function fetchRates() {
+      try {
+        const { data: rows } = await supabase
+          .from("tax_rates")
+          .select("*")
+          .eq("year", year)
+          .limit(1);
+        if (rows && rows.length > 0) {
+          const r = rows[0];
+          setRates({
+            mileageRate: Number(r.mileage_rate) || DEFAULT_RATES.mileageRate,
+            seTaxRate:   Number(r.se_tax)        || DEFAULT_RATES.seTaxRate,
+            fedTaxRate:  Number(r.fed_tax)        || DEFAULT_RATES.fedTaxRate,
+            salesTax:    Number(r.sales_tax)      || DEFAULT_RATES.salesTax,
+          });
+        } else {
+          const { data: recent } = await supabase
+            .from("tax_rates")
+            .select("*")
+            .lt("year", year)
+            .order("year", { ascending: false })
+            .limit(1);
+          if (recent && recent.length > 0) {
+            const r = recent[0];
+            setRates({
+              mileageRate: Number(r.mileage_rate) || DEFAULT_RATES.mileageRate,
+              seTaxRate:   Number(r.se_tax)        || DEFAULT_RATES.seTaxRate,
+              fedTaxRate:  Number(r.fed_tax)        || DEFAULT_RATES.fedTaxRate,
+              salesTax:    Number(r.sales_tax)      || DEFAULT_RATES.salesTax,
+            });
+          } else {
+            setRates(DEFAULT_RATES);
+          }
+        }
+      } catch (e) {
+        setRates(DEFAULT_RATES);
+      }
+    }
+    fetchRates();
+  }, [year]);
+
+  const { mileageRate, seTaxRate, fedTaxRate } = rates;
+
   const quarters = useMemo(() => QUARTERS.map(q => {
     const from     = q.from(year);
     const to       = q.to(year);
@@ -90,7 +134,6 @@ export default function Export({ data }) {
     return { ...q, from, to, jobs, expenses, mileage, metrics };
   }), [allJobs, allExpenses, allMileage, year, mileageRate, seTaxRate, fedTaxRate]);
 
-  // Annual uses full calc — mileage deduction included for CPA report
   const annual = useMemo(() => {
     const jobs     = allJobs.filter(j => inRange(j.date, `${year}-01-01`, `${year}-12-31`));
     const expenses = allExpenses.filter(e => inRange(e.date, `${year}-01-01`, `${year}-12-31`));
@@ -98,16 +141,12 @@ export default function Export({ data }) {
     return { jobs, expenses, mileage, metrics: calcAnnualMetrics(jobs, expenses, mileage, mileageRate, seTaxRate, fedTaxRate) };
   }, [allJobs, allExpenses, allMileage, year, mileageRate, seTaxRate, fedTaxRate]);
 
-  // YTD tax = running sum of all quarter tax estimates
   const ytdTax = useMemo(() =>
-    quarters.reduce((s, q) => s + q.metrics.totalTax, 0),
-    [quarters]
-  );
+    quarters.reduce((s, q) => s + q.metrics.totalTax, 0), [quarters]);
 
   const expensesByCategory = useMemo(() =>
     groupExpensesByCategory(annual.expenses), [annual.expenses]);
 
-  const qColor  = C.accent;
   const hasData = annual.jobs.length > 0 || annual.expenses.length > 0 || annual.mileage.length > 0;
 
   async function buildPDF() {
@@ -210,7 +249,7 @@ export default function Export({ data }) {
       f("bold", 22); tc(WHITE);
       t("OCASIO MECHANICAL SERVICES", ML, 36);
       f("normal", 11); tc([147, 197, 253]);
-      t("LLC  ·  Mobile Automotive Service  ·  Florida", ML, 53);
+      t("LLC  ·  Mobile Mechanical Service  ·  Florida", ML, 53);
       f("normal", 9); tc([147, 197, 253]);
       t(`${BIZ.address}  ·  ${BIZ.city}  ·  ${BIZ.phone}  ·  ${BIZ.email}`, ML, 69);
       f("bold", 40); tc(WHITE);
@@ -240,7 +279,7 @@ export default function Export({ data }) {
       row("IRS Standard Mileage Rate",           `$${mileageRate} per mile`,           { rule: true });
 
       sectionLabel("Income");
-      row("Gross Revenue — Automotive Services", fmt(m.revenue), { rule: true, color: BLACK });
+      row("Gross Revenue — Mechanical Services", fmt(m.revenue), { rule: true, color: BLACK });
       totalRow("Total Income", fmt(m.revenue), GREEN);
 
       sectionLabel("Deductions");
@@ -274,14 +313,12 @@ export default function Export({ data }) {
       quarters.forEach((q) => {
         const qm = q.metrics;
         checkPage(100);
-
         f("bold", 10); tc(NAVY);
         t(q.label, ML, y);
         f("normal", 9); tc(MGRAY);
         t(q.period, ML + 24, y);
         hline(y + 4, NAVY, 0.5);
         y += 14;
-
         row("Gross Revenue",     fmt(qm.revenue),                   { indent: 8, rule: true, color: BLACK });
         row("Business Expenses", fmt(qm.expTotal),                  { indent: 8, rule: true, color: BLACK });
         row("Mileage Logged",    `${qm.miles.toLocaleString()} mi`, { indent: 8, rule: true, color: DGRAY });
@@ -290,7 +327,6 @@ export default function Export({ data }) {
         y += 8;
       });
 
-      // Full Year Totals — sum of quarters
       checkPage(110);
       y += 4;
       sectionLabel("Full Year Totals");
@@ -320,7 +356,6 @@ export default function Export({ data }) {
         y += 16;
       });
 
-      // YTD Tax total row
       y += 4;
       totalRow("YTD Tax Estimate (Sum of Quarters)", fmt(ytdTax), STEEL);
       y += 4;
@@ -328,7 +363,6 @@ export default function Export({ data }) {
       t("Mileage deduction not applied to quarterly estimates — CPA will adjust at filing.", ML, y);
       y += 14;
 
-      // Expenses + Mileage
       const expMilNeeded = 80 + Math.max(expensesByCategory.length, 1) * 16 + 120;
       checkPage(expMilNeeded);
 
@@ -443,143 +477,50 @@ export default function Export({ data }) {
   return (
     <div>
       {/* Year selector */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-        <button onClick={() => { setYear(y => y - 1); setPdfReady(false); }} style={{ ...S.btnSecondary, padding: "8px 14px" }}>←</button>
-        <div style={{ fontSize: 18, fontWeight: 700, flex: 1, textAlign: "center" }}>{year}</div>
-        <button onClick={() => { setYear(y => y + 1); setPdfReady(false); }} style={{ ...S.btnSecondary, padding: "8px 14px" }}>→</button>
-      </div>
-
-      {/* Quarterly cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-        {quarters.map((q) => {
-          const m = q.metrics;
-          return (
-            <div key={q.label} style={{
-              background:   C.surface,
-              border:       `1px solid ${C.border}`,
-              borderRadius: 12,
-              padding:      "18px 16px",
-              borderTop:    `4px solid ${qColor}`,
-            }}>
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 16, fontWeight: 700, color: qColor, marginBottom: 2 }}>{q.label}</div>
-                <div style={{ fontSize: 11, color: C.textSecondary }}>{q.period}</div>
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-                {[
-                  ["Revenue",  fmt(m.revenue),  C.green],
-                  ["Expenses", fmt(m.expTotal),  C.red],
-                  ["Mileage",  `${m.miles} mi`,  C.textSecondary],
-                ].map(([l, v, c]) => (
-                  <div key={l} style={{
-                    display:        "flex",
-                    justifyContent: "space-between",
-                    alignItems:     "center",
-                    padding:        "7px 0",
-                    borderBottom:   `1px solid ${C.border}`,
-                  }}>
-                    <span style={{ fontSize: 12, color: C.textSecondary }}>{l}</span>
-                    <span style={{ fontSize: 13, color: c, fontWeight: 600 }}>{v}</span>
-                  </div>
-                ))}
-
-                {/* Net Profit */}
-                <div style={{
-                  display:        "flex",
-                  justifyContent: "space-between",
-                  alignItems:     "center",
-                  padding:        "8px 0",
-                  borderBottom:   `1px solid ${C.border}`,
-                }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: C.textPrimary }}>Net Profit</span>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: m.netProfit >= 0 ? C.green : C.red }}>
-                    {fmt(m.netProfit)}
-                  </span>
-                </div>
-
-                {/* Tax Est — calculated on quarter net profit only, no mileage */}
-                <div style={{
-                  display:        "flex",
-                  justifyContent: "space-between",
-                  alignItems:     "center",
-                  padding:        "8px 0 2px",
-                }}>
-                  <span style={{ fontSize: 12, color: C.textSecondary }}>Tax Est.</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: C.yellow }}>
-                    {fmt(m.totalTax)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div style={{ marginTop: 10, paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
-                <span style={{ fontSize: 11, color: C.textMuted }}>
-                  {q.jobs.length} job{q.jobs.length !== 1 ? "s" : ""}  ·  Due {q.due}
-                </span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Annual total — YTD tax is running sum of quarters */}
-      <div style={{ ...S.card, marginBottom: 16 }}>
-        <div style={S.cardTitle}>{year} Annual Total</div>
-        {[
-          ["Gross Revenue",     fmt(annual.metrics.revenue),    C.green],
-          ["Total Expenses",    fmt(annual.metrics.expTotal),   C.red],
-          ["Mileage Deduction", fmt(annual.metrics.mileDeduct), C.red],
-          ["Net Profit",        fmt(annual.metrics.netProfit),  annual.metrics.netProfit >= 0 ? C.green : C.red],
-          ["SE Tax (15.3%)",    fmt(annual.metrics.seTax),      C.yellow],
-          ["Federal Tax Est.",  fmt(annual.metrics.fedTax),     C.yellow],
-        ].map(([label, value, color]) => (
-          <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", borderBottom: `1px solid ${C.border}` }}>
-            <span style={{ fontSize: 13, color: C.textSecondary }}>{label}</span>
-            <span style={{ fontSize: 14, color, fontWeight: 600 }}>{value}</span>
-          </div>
-        ))}
-
-        {/* YTD Tax — sum of quarterly estimates */}
-        <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0 4px" }}>
-          <span style={{ fontSize: 14, fontWeight: 700 }}>YTD Tax Estimate</span>
-          <span style={{ fontSize: 17, color: C.yellow, fontWeight: 700 }}>{fmt(ytdTax)}</span>
-        </div>
-        <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
-          Sum of quarterly estimates · mileage deduction applied at filing by CPA
-        </div>
-      </div>
-
-      {/* Export card */}
-      <div style={{ ...S.card, marginBottom: 24 }}>
-        <div style={S.cardTitle}>Export</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
         <button
-          style={{ ...S.btnPrimary, width: "100%", padding: "14px 0", fontSize: 14, marginBottom: 10 }}
-          onClick={buildPDF}
-          disabled={generating || !hasData}
-        >
-          {generating ? "Building PDF..." : `Build ${year} PDF Report`}
-        </button>
-        {pdfReady && (
-          <button
-            style={{ ...S.btnPrimary, width: "100%", padding: "14px 0", fontSize: 14, marginBottom: 8, background: "#059669" }}
-            onClick={sharePDF}
-            disabled={sharing}
-          >
-            {sharing ? "Opening Share..." : "Share / Save PDF ↗"}
-          </button>
-        )}
-        <div style={{ fontSize: 12, color: C.textSecondary, textAlign: "center" }}>
-          {pdfReady
-            ? "PDF ready — tap Share to send to Mail, Files, or AirDrop"
-            : "Tap Build to generate your annual PDF report"}
+          onClick={() => { onYearChange(year - 1); setPdfReady(false); }}
+          style={{ ...S.btnSecondary, padding: "8px 16px", fontSize: 16 }}
+        >←</button>
+        <div style={{ fontSize: 18, fontWeight: 700, flex: 1, textAlign: "center", letterSpacing: "-0.5px" }}>
+          {year}
         </div>
-        {!hasData && (
-          <div style={{ fontSize: 12, color: C.textMuted, marginTop: 8, textAlign: "center" }}>
-            No data for {year} — add jobs, expenses, or mileage first.
-          </div>
-        )}
+        <button
+          onClick={() => { onYearChange(year + 1); setPdfReady(false); }}
+          style={{ ...S.btnSecondary, padding: "8px 16px", fontSize: 16 }}
+        >→</button>
       </div>
+
+      {/* Build PDF */}
+      <button
+        style={{ ...S.btnPrimary, width: "100%", padding: "15px 0", fontSize: 15, marginBottom: 10 }}
+        onClick={buildPDF}
+        disabled={generating || !hasData}
+      >
+        {generating ? "Building PDF..." : `Build ${year} PDF Report`}
+      </button>
+
+      {/* Share PDF */}
+      {pdfReady && (
+        <button
+          style={{ ...S.btnPrimary, width: "100%", padding: "15px 0", fontSize: 15, marginBottom: 8, background: "#059669" }}
+          onClick={sharePDF}
+          disabled={sharing}
+        >
+          {sharing ? "Opening Share..." : "Share / Save PDF ↗"}
+        </button>
+      )}
+
+      <div style={{ fontSize: 12, color: C.textSecondary, textAlign: "center", marginTop: 4 }}>
+        {pdfReady
+          ? "PDF ready — tap Share to send to Mail, Files, or AirDrop"
+          : "Generates a professional CPA-ready PDF report"}
+      </div>
+      {!hasData && (
+        <div style={{ fontSize: 12, color: C.textMuted, textAlign: "center", marginTop: 8 }}>
+          No data for {year} — add jobs, expenses, or mileage first.
+        </div>
+      )}
     </div>
   );
 }
