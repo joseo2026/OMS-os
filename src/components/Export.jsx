@@ -18,7 +18,8 @@ const BIZ = {
   email:   "jose@oms.com",
 };
 
-function calcMetrics(jobs, expenses, mileage, mileageRate, seTaxRate, fedTaxRate) {
+// ── Annual metrics — includes mileage deduction for CPA report ──
+function calcAnnualMetrics(jobs, expenses, mileage, mileageRate, seTaxRate, fedTaxRate) {
   const revenue    = jobs.reduce((s, j) => s + Number(j.grandTotal || j.grand_total || 0), 0);
   const expTotal   = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
   const miles      = mileage.reduce((s, m) => s + Number(String(m.miles || 0).replace(/,/g, "")), 0);
@@ -29,6 +30,22 @@ function calcMetrics(jobs, expenses, mileage, mileageRate, seTaxRate, fedTaxRate
   const fedTax     = taxable * fedTaxRate;
   const totalTax   = seTax + fedTax;
   return { revenue, expTotal, miles, mileDeduct, netProfit, seTax, fedTax, totalTax };
+}
+
+// ── Quarterly metrics — NO mileage deduction from tax calc ──
+// Each quarter stands alone. Mileage is tracked but not used to reduce tax estimate.
+// CPA claims mileage annually at filing. This prevents underestimating quarterly payments.
+function calcQuarterMetrics(jobs, expenses, mileage, mileageRate, seTaxRate, fedTaxRate) {
+  const revenue   = jobs.reduce((s, j) => s + Number(j.grandTotal || j.grand_total || 0), 0);
+  const expTotal  = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+  const miles     = mileage.reduce((s, m) => s + Number(String(m.miles || 0).replace(/,/g, "")), 0);
+  const netProfit = revenue - expTotal;
+  // Tax on net profit only — no mileage deduction
+  const seTax     = Math.max(0, netProfit) * 0.9235 * seTaxRate;
+  const taxable   = Math.max(0, netProfit - seTax * 0.5);
+  const fedTax    = taxable * fedTaxRate;
+  const totalTax  = seTax + fedTax;
+  return { revenue, expTotal, miles, mileDeduct: miles * mileageRate, netProfit, seTax, fedTax, totalTax };
 }
 
 function inRange(date, from, to) {
@@ -62,22 +79,30 @@ export default function Export({ data }) {
   const allExpenses = data.expenses || [];
   const allMileage  = data.mileage  || [];
 
+  // Quarters use quarterly calc — no mileage in tax estimate
   const quarters = useMemo(() => QUARTERS.map(q => {
     const from     = q.from(year);
     const to       = q.to(year);
     const jobs     = allJobs.filter(j => inRange(j.date, from, to));
     const expenses = allExpenses.filter(e => inRange(e.date, from, to));
     const mileage  = allMileage.filter(m => inRange(m.date, from, to));
-    const metrics  = calcMetrics(jobs, expenses, mileage, mileageRate, seTaxRate, fedTaxRate);
+    const metrics  = calcQuarterMetrics(jobs, expenses, mileage, mileageRate, seTaxRate, fedTaxRate);
     return { ...q, from, to, jobs, expenses, mileage, metrics };
   }), [allJobs, allExpenses, allMileage, year, mileageRate, seTaxRate, fedTaxRate]);
 
+  // Annual uses full calc — mileage deduction included for CPA report
   const annual = useMemo(() => {
     const jobs     = allJobs.filter(j => inRange(j.date, `${year}-01-01`, `${year}-12-31`));
     const expenses = allExpenses.filter(e => inRange(e.date, `${year}-01-01`, `${year}-12-31`));
     const mileage  = allMileage.filter(m => inRange(m.date, `${year}-01-01`, `${year}-12-31`));
-    return { jobs, expenses, mileage, metrics: calcMetrics(jobs, expenses, mileage, mileageRate, seTaxRate, fedTaxRate) };
+    return { jobs, expenses, mileage, metrics: calcAnnualMetrics(jobs, expenses, mileage, mileageRate, seTaxRate, fedTaxRate) };
   }, [allJobs, allExpenses, allMileage, year, mileageRate, seTaxRate, fedTaxRate]);
+
+  // YTD tax = running sum of all quarter tax estimates
+  const ytdTax = useMemo(() =>
+    quarters.reduce((s, q) => s + q.metrics.totalTax, 0),
+    [quarters]
+  );
 
   const expensesByCategory = useMemo(() =>
     groupExpensesByCategory(annual.expenses), [annual.expenses]);
@@ -229,6 +254,10 @@ export default function Export({ data }) {
       row("Self-Employment Tax  (15.3% × 92.35% of net profit)", fmt(m.seTax),  { rule: true, color: BLACK });
       row("Federal Income Tax Estimate",                          fmt(m.fedTax), { rule: true, color: BLACK });
       totalRow("Total Estimated Tax Liability", fmt(m.totalTax), STEEL);
+      y += 4;
+      f("normal", 8); tc(MGRAY);
+      t("Note: Annual estimate includes mileage deduction. Quarterly estimates do not — your CPA will apply mileage at filing.", ML, y);
+      y += 14;
 
       // PAGE 2
       newPage();
@@ -255,12 +284,13 @@ export default function Export({ data }) {
 
         row("Gross Revenue",     fmt(qm.revenue),                   { indent: 8, rule: true, color: BLACK });
         row("Business Expenses", fmt(qm.expTotal),                  { indent: 8, rule: true, color: BLACK });
-        row("Mileage",           `${qm.miles.toLocaleString()} mi`, { indent: 8, rule: true, color: DGRAY });
+        row("Mileage Logged",    `${qm.miles.toLocaleString()} mi`, { indent: 8, rule: true, color: DGRAY });
         row("Net Profit",        fmt(qm.netProfit),                 { indent: 8, rule: true, bold: true, color: qm.netProfit >= 0 ? GREEN : RED });
         row("Tax Estimate",      fmt(qm.totalTax),                  { indent: 8, rule: true, bold: true, color: STEEL });
         y += 8;
       });
 
+      // Full Year Totals — sum of quarters
       checkPage(110);
       y += 4;
       sectionLabel("Full Year Totals");
@@ -289,6 +319,14 @@ export default function Export({ data }) {
         hline(y + 4, LGRAY, 0.3);
         y += 16;
       });
+
+      // YTD Tax total row
+      y += 4;
+      totalRow("YTD Tax Estimate (Sum of Quarters)", fmt(ytdTax), STEEL);
+      y += 4;
+      f("normal", 8); tc(MGRAY);
+      t("Mileage deduction not applied to quarterly estimates — CPA will adjust at filing.", ML, y);
+      y += 14;
 
       // Expenses + Mileage
       const expMilNeeded = 80 + Math.max(expensesByCategory.length, 1) * 16 + 120;
@@ -343,12 +381,11 @@ export default function Export({ data }) {
         ["Total Trips Logged",        String(annual.mileage.length)],
         ["Total Miles Driven",        `${m.miles.toLocaleString()} miles`],
         ["IRS Standard Rate Applied", `$${mileageRate} per mile`],
+        ["Annual Mileage Deduction",  fmt(m.mileDeduct)],
       ].forEach(([label, val], i) => {
         if (i % 2 === 0) { fc(XLGRAY); dc(XLGRAY); doc.rect(ML, y - 11, colR - ML, 16, "F"); }
-        row(label, val, { rule: true, color: BLACK });
+        row(label, val, { rule: true, color: i === 3 ? RED : BLACK });
       });
-      y += 4;
-      totalRow("Total Mileage Deduction", fmt(m.mileDeduct), RED);
 
       y += 14;
       checkPage(20);
@@ -412,7 +449,7 @@ export default function Export({ data }) {
         <button onClick={() => { setYear(y => y + 1); setPdfReady(false); }} style={{ ...S.btnSecondary, padding: "8px 14px" }}>→</button>
       </div>
 
-      {/* Quarterly cards — larger, more legible */}
+      {/* Quarterly cards */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
         {quarters.map((q) => {
           const m = q.metrics;
@@ -424,13 +461,11 @@ export default function Export({ data }) {
               padding:      "18px 16px",
               borderTop:    `4px solid ${qColor}`,
             }}>
-              {/* Quarter label + period */}
               <div style={{ marginBottom: 14 }}>
                 <div style={{ fontSize: 16, fontWeight: 700, color: qColor, marginBottom: 2 }}>{q.label}</div>
                 <div style={{ fontSize: 11, color: C.textSecondary }}>{q.period}</div>
               </div>
 
-              {/* Data rows */}
               <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
                 {[
                   ["Revenue",  fmt(m.revenue),  C.green],
@@ -438,11 +473,11 @@ export default function Export({ data }) {
                   ["Mileage",  `${m.miles} mi`,  C.textSecondary],
                 ].map(([l, v, c]) => (
                   <div key={l} style={{
-                    display:       "flex",
+                    display:        "flex",
                     justifyContent: "space-between",
-                    alignItems:    "center",
-                    padding:       "7px 0",
-                    borderBottom:  `1px solid ${C.border}`,
+                    alignItems:     "center",
+                    padding:        "7px 0",
+                    borderBottom:   `1px solid ${C.border}`,
                   }}>
                     <span style={{ fontSize: 12, color: C.textSecondary }}>{l}</span>
                     <span style={{ fontSize: 13, color: c, fontWeight: 600 }}>{v}</span>
@@ -463,7 +498,7 @@ export default function Export({ data }) {
                   </span>
                 </div>
 
-                {/* Tax Est */}
+                {/* Tax Est — calculated on quarter net profit only, no mileage */}
                 <div style={{
                   display:        "flex",
                   justifyContent: "space-between",
@@ -477,7 +512,7 @@ export default function Export({ data }) {
                 </div>
               </div>
 
-              {/* Job count footer */}
+              {/* Footer */}
               <div style={{ marginTop: 10, paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
                 <span style={{ fontSize: 11, color: C.textMuted }}>
                   {q.jobs.length} job{q.jobs.length !== 1 ? "s" : ""}  ·  Due {q.due}
@@ -488,7 +523,7 @@ export default function Export({ data }) {
         })}
       </div>
 
-      {/* Annual total */}
+      {/* Annual total — YTD tax is running sum of quarters */}
       <div style={{ ...S.card, marginBottom: 16 }}>
         <div style={S.cardTitle}>{year} Annual Total</div>
         {[
@@ -504,12 +539,14 @@ export default function Export({ data }) {
             <span style={{ fontSize: 14, color, fontWeight: 600 }}>{value}</span>
           </div>
         ))}
+
+        {/* YTD Tax — sum of quarterly estimates */}
         <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0 4px" }}>
-          <span style={{ fontSize: 14, fontWeight: 700 }}>Total Tax Estimate</span>
-          <span style={{ fontSize: 17, color: C.yellow, fontWeight: 700 }}>{fmt(annual.metrics.totalTax)}</span>
+          <span style={{ fontSize: 14, fontWeight: 700 }}>YTD Tax Estimate</span>
+          <span style={{ fontSize: 17, color: C.yellow, fontWeight: 700 }}>{fmt(ytdTax)}</span>
         </div>
-        <div style={{ fontSize: 12, color: C.textSecondary, marginTop: 4 }}>
-          Quarterly payment: <span style={{ color: C.accent, fontWeight: 600 }}>{fmt(annual.metrics.totalTax / 4)}</span> per quarter
+        <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+          Sum of quarterly estimates · mileage deduction applied at filing by CPA
         </div>
       </div>
 
