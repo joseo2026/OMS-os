@@ -9,7 +9,6 @@ const QUARTERS = [
   { label: "Q4", period: "Sep 1 – Dec 31", due: "Jan 15", from: (y) => `${y}-09-01`, to: (y) => `${y}-12-31` },
 ];
 
-// Annual metrics — includes mileage deduction for CPA accuracy
 function calcAnnualMetrics(jobs, expenses, mileage, mileageRate, seTaxRate, fedTaxRate) {
   const revenue    = jobs.reduce((s, j) => s + Number(j.grandTotal || j.grand_total || 0), 0);
   const expTotal   = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
@@ -23,7 +22,6 @@ function calcAnnualMetrics(jobs, expenses, mileage, mileageRate, seTaxRate, fedT
   return { revenue, expTotal, miles, mileDeduct, netProfit, seTax, fedTax, totalTax };
 }
 
-// Quarterly metrics — no mileage deduction, each quarter stands alone
 function calcQuarterMetrics(jobs, expenses, mileage, mileageRate, seTaxRate, fedTaxRate) {
   const revenue   = jobs.reduce((s, j) => s + Number(j.grandTotal || j.grand_total || 0), 0);
   const expTotal  = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
@@ -43,7 +41,6 @@ function inRange(date, from, to) {
   return true;
 }
 
-// Default rates — used if no Supabase rates found for that year
 const DEFAULT_RATES = {
   mileageRate: 0.725,
   seTaxRate:   0.153,
@@ -61,7 +58,6 @@ export default function Overview({ data, setData }) {
   const allExpenses = data.expenses || [];
   const allMileage  = data.mileage  || [];
 
-  // Load year-specific tax rates from Supabase
   useEffect(() => {
     async function fetchRates() {
       setLoadingRates(true);
@@ -81,14 +77,12 @@ export default function Overview({ data, setData }) {
             salesTax:    Number(r.sales_tax)      || DEFAULT_RATES.salesTax,
           });
         } else {
-          // No rates for this year — try to find most recent year's rates
           const { data: recent } = await supabase
             .from("tax_rates")
             .select("*")
             .lt("year", year)
             .order("year", { ascending: false })
             .limit(1);
-
           if (recent && recent.length > 0) {
             const r = recent[0];
             setRates({
@@ -131,19 +125,17 @@ export default function Overview({ data, setData }) {
   const ytdTax = useMemo(() =>
     quarters.reduce((s, q) => s + q.metrics.totalTax, 0), [quarters]);
 
-  // Recent jobs — last 5, sorted by date descending
-  const recentJobs = useMemo(() => {
-    return [...(data.jobs || [])]
+  const recentJobs = useMemo(() =>
+    [...(data.jobs || [])]
       .sort((a, b) => new Date(b.date || b.created_at) - new Date(a.date || a.created_at))
-      .slice(0, 5);
-  }, [data.jobs]);
-
-  const qColor = C.accent;
+      .slice(0, 5),
+    [data.jobs]
+  );
 
   return (
     <div>
       {/* Year selector */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
         <button
           onClick={() => setYear(y => y - 1)}
           style={{ ...S.btnSecondary, padding: "8px 16px", fontSize: 16 }}
@@ -152,7 +144,7 @@ export default function Overview({ data, setData }) {
           {year}
           {loadingRates && (
             <span style={{ fontSize: 11, color: C.textMuted, fontWeight: 400, marginLeft: 8 }}>
-              loading rates...
+              loading...
             </span>
           )}
         </div>
@@ -162,85 +154,151 @@ export default function Overview({ data, setData }) {
         >→</button>
       </div>
 
-      {/* Quarterly cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
-        {quarters.map((q) => {
+      {/* Quarterly breakdown — full width, statement style */}
+      <div style={{ ...S.card, padding: 0, overflow: "hidden", marginBottom: 14 }}>
+        {/* Card header */}
+        <div style={{
+          padding:      "14px 18px",
+          borderBottom: `1px solid ${C.border}`,
+          display:      "flex",
+          justifyContent: "space-between",
+          alignItems:   "center",
+        }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>
+            Quarterly Breakdown
+          </div>
+          <div style={{ fontSize: 11, color: C.textMuted }}>
+            {year}
+          </div>
+        </div>
+
+        {/* Column headers */}
+        <div style={{
+          display:        "grid",
+          gridTemplateColumns: "1fr 1fr 1fr 1fr",
+          padding:        "10px 18px",
+          borderBottom:   `1px solid ${C.border}`,
+          background:     C.elevated,
+        }}>
+          {["Revenue", "Expenses", "Net Profit", "Tax Est."].map(h => (
+            <div key={h} style={{
+              fontSize:  10,
+              color:     C.textMuted,
+              fontWeight: 500,
+              textAlign: h === "Revenue" ? "left" : "right",
+              textTransform: "uppercase",
+              letterSpacing: "0.06em",
+            }}>
+              {h}
+            </div>
+          ))}
+        </div>
+
+        {/* Quarter rows */}
+        {quarters.map((q, i) => {
           const m = q.metrics;
+          const hasActivity = m.revenue > 0 || m.expTotal > 0;
           return (
             <div key={q.label} style={{
-              background:   C.surface,
-              borderRadius: 14,
-              padding:      "16px 14px",
-              borderTop:    `3px solid ${qColor}`,
-              boxShadow:    S.card.boxShadow,
+              borderBottom: i < quarters.length - 1 ? `1px solid ${C.border}` : "none",
             }}>
-              {/* Quarter label */}
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: qColor, marginBottom: 1 }}>{q.label}</div>
-                <div style={{ fontSize: 11, color: C.textMuted }}>{q.period}</div>
+              {/* Quarter label row */}
+              <div style={{
+                display:        "flex",
+                justifyContent: "space-between",
+                alignItems:     "center",
+                padding:        "10px 18px 6px",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{
+                    fontSize:   12,
+                    fontWeight: 700,
+                    color:      hasActivity ? C.accent : C.textMuted,
+                  }}>
+                    {q.label}
+                  </div>
+                  <div style={{ fontSize: 11, color: C.textMuted }}>
+                    {q.period}
+                  </div>
+                </div>
+                <div style={{ fontSize: 10, color: C.textMuted }}>
+                  {q.jobs.length > 0
+                    ? `${q.jobs.length} job${q.jobs.length !== 1 ? "s" : ""}`
+                    : `Due ${q.due}`}
+                </div>
               </div>
 
-              {/* Data rows */}
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                {[
-                  ["Revenue",  fmt(m.revenue),  C.green],
-                  ["Expenses", fmt(m.expTotal),  C.red],
-                  ["Mileage",  `${m.miles} mi`,  C.textMuted],
-                ].map(([l, v, c]) => (
-                  <div key={l} style={{
-                    display:        "flex",
-                    justifyContent: "space-between",
-                    alignItems:     "center",
-                    padding:        "6px 0",
-                    borderBottom:   `1px solid ${C.border}`,
-                  }}>
-                    <span style={{ fontSize: 12, color: C.textSecondary }}>{l}</span>
-                    <span style={{ fontSize: 12, color: c, fontWeight: 600 }}>{v}</span>
-                  </div>
-                ))}
+              {/* Data row */}
+              <div style={{
+                display:             "grid",
+                gridTemplateColumns: "1fr 1fr 1fr 1fr",
+                padding:             "4px 18px 12px",
+                alignItems:          "center",
+              }}>
+                {/* Revenue */}
+                <div style={{
+                  fontSize:  14,
+                  fontWeight: 600,
+                  color:     m.revenue > 0 ? C.green : C.textMuted,
+                }}>
+                  {fmt(m.revenue)}
+                </div>
+
+                {/* Expenses */}
+                <div style={{
+                  fontSize:  14,
+                  fontWeight: 600,
+                  color:     m.expTotal > 0 ? C.red : C.textMuted,
+                  textAlign: "right",
+                }}>
+                  {fmt(m.expTotal)}
+                </div>
 
                 {/* Net Profit */}
                 <div style={{
-                  display:        "flex",
-                  justifyContent: "space-between",
-                  alignItems:     "center",
-                  padding:        "7px 0",
-                  borderBottom:   `1px solid ${C.border}`,
+                  fontSize:  14,
+                  fontWeight: 700,
+                  color:     m.netProfit > 0 ? C.green : m.netProfit < 0 ? C.red : C.textMuted,
+                  textAlign: "right",
                 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: C.textPrimary }}>Net Profit</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: m.netProfit >= 0 ? C.green : C.red }}>
-                    {fmt(m.netProfit)}
-                  </span>
+                  {fmt(m.netProfit)}
                 </div>
 
                 {/* Tax Est */}
                 <div style={{
-                  display:        "flex",
-                  justifyContent: "space-between",
-                  alignItems:     "center",
-                  padding:        "7px 0 0",
+                  fontSize:  14,
+                  fontWeight: 600,
+                  color:     m.totalTax > 0 ? C.yellow : C.textMuted,
+                  textAlign: "right",
                 }}>
-                  <span style={{ fontSize: 12, color: C.textSecondary }}>Tax Est.</span>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: C.yellow }}>
-                    {fmt(m.totalTax)}
-                  </span>
+                  {fmt(m.totalTax)}
                 </div>
-              </div>
-
-              {/* Footer */}
-              <div style={{ marginTop: 10, paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
-                <span style={{ fontSize: 10, color: C.textMuted }}>
-                  {q.jobs.length} job{q.jobs.length !== 1 ? "s" : ""}  ·  Due {q.due}
-                </span>
               </div>
             </div>
           );
         })}
+
+        {/* YTD Tax summary row */}
+        <div style={{
+          display:        "flex",
+          justifyContent: "space-between",
+          alignItems:     "center",
+          padding:        "12px 18px",
+          background:     C.elevated,
+          borderTop:      `1px solid ${C.border}`,
+        }}>
+          <div style={{ fontSize: 12, color: C.textSecondary, fontWeight: 500 }}>
+            YTD Tax Estimate
+          </div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: C.yellow }}>
+            {fmt(ytdTax)}
+          </div>
+        </div>
       </div>
 
-      {/* Annual Total */}
+      {/* Annual Summary */}
       <div style={{ ...S.card, marginBottom: 14 }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: C.textPrimary, marginBottom: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary, marginBottom: 14 }}>
           {year} Annual Summary
         </div>
         {[
@@ -262,17 +320,21 @@ export default function Overview({ data, setData }) {
           </div>
         ))}
         <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0 2px" }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: C.textPrimary }}>YTD Tax Estimate</span>
-          <span style={{ fontSize: 18, color: C.yellow, fontWeight: 700 }}>{fmt(ytdTax)}</span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: C.textPrimary }}>
+            Total Tax Estimate
+          </span>
+          <span style={{ fontSize: 18, color: C.yellow, fontWeight: 700 }}>
+            {fmt(annual.metrics.totalTax)}
+          </span>
         </div>
         <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>
-          Sum of quarterly estimates · mileage applied at filing
+          Includes mileage deduction · CPA applies at filing
         </div>
       </div>
 
       {/* Recent Jobs */}
       <div style={{ ...S.card, marginBottom: 14 }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: C.textPrimary, marginBottom: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary, marginBottom: 14 }}>
           Recent Jobs
         </div>
         {recentJobs.length === 0 ? (
