@@ -16,12 +16,16 @@ export const SERVICES = [
   { name: "Custom Service", labor: 0, parts: 0 },
 ];
 
+export const LIFT_TRUCK_SERVICES = [
+  { name: "Trip Charge", labor: 100, parts: 0 },
+  { name: "Custom Service", labor: 0, parts: 0 },
+];
+
 export const FL_TAX = 0.07;
 export const SE_TAX_RATE = 0.153;
 export const FED_TAX_RATE = 0.22;
 export const QUARTERLY_DATES = ["Apr 15", "Jun 15", "Sep 15", "Jan 15"];
 export const MILEAGE_RATE = 0.725; // IRS standard mileage rate for 2026
-
 export const STORAGE_KEY = "oms-data-v1";
 
 export const defaultData = {
