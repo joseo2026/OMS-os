@@ -121,7 +121,6 @@ export default function Export({ data }) {
       function checkPage(needed = 32)   { if (y + needed > BOTTOM) { doc.addPage(); y = 56; } }
       function newPage()                { doc.addPage(); y = 56; }
 
-      // ── Section label — navy bold all-caps, inline with doc flow ──
       function sectionLabel(label) {
         checkPage(32);
         y += 10;
@@ -132,7 +131,6 @@ export default function Export({ data }) {
         y += 14;
       }
 
-      // ── Data row ──
       function row(label, value, opts = {}) {
         checkPage(18);
         const indent = opts.indent || 0;
@@ -152,7 +150,6 @@ export default function Export({ data }) {
         y += opts.rule ? 16 : 14;
       }
 
-      // ── Standard total row ──
       function totalRow(label, value, color = STEEL) {
         checkPage(22);
         fc(XLGRAY); dc(LGRAY, 0.4);
@@ -166,7 +163,6 @@ export default function Export({ data }) {
         y += 18;
       }
 
-      // ── Net Profit — open style, bold rule above and below, no box ──
       function netProfitRow(value, profit) {
         checkPage(24);
         y += 6;
@@ -180,10 +176,7 @@ export default function Export({ data }) {
         y += 22;
       }
 
-      // ════════════════════════════════════════
-      // PAGE 1 — Header + Annual Summary
-      // ════════════════════════════════════════
-
+      // PAGE 1
       fc(NAVY); dc(NAVY);
       doc.rect(0, 0, pageW, 96, "F");
       fc(STEEL); dc(STEEL);
@@ -216,35 +209,28 @@ export default function Export({ data }) {
       hline(y, LGRAY, 0.5);
       y += 14;
 
-      // Tax Rate Settings
       sectionLabel("Tax Rate Settings Used");
       row("Self-Employment Tax Rate",            `${(seTaxRate * 100).toFixed(1)}%`,  { rule: true });
       row("Federal Income Tax Rate (Estimated)", `${(fedTaxRate * 100).toFixed(1)}%`, { rule: true });
       row("IRS Standard Mileage Rate",           `$${mileageRate} per mile`,           { rule: true });
 
-      // Income
       sectionLabel("Income");
       row("Gross Revenue — Automotive Services", fmt(m.revenue), { rule: true, color: BLACK });
       totalRow("Total Income", fmt(m.revenue), GREEN);
 
-      // Deductions
       sectionLabel("Deductions");
       row("Business Expenses",                                                      fmt(m.expTotal),   { rule: true, color: BLACK });
       row(`Mileage Deduction  (${m.miles.toLocaleString()} mi × $${mileageRate})`, fmt(m.mileDeduct), { rule: true, color: BLACK });
       totalRow("Total Deductions", fmt(m.expTotal + m.mileDeduct), RED);
 
-      // Net Profit — open, no box
       netProfitRow(fmt(m.netProfit), m.netProfit);
 
-      // Estimated Tax Liability
       sectionLabel("Estimated Tax Liability");
       row("Self-Employment Tax  (15.3% × 92.35% of net profit)", fmt(m.seTax),  { rule: true, color: BLACK });
       row("Federal Income Tax Estimate",                          fmt(m.fedTax), { rule: true, color: BLACK });
       totalRow("Total Estimated Tax Liability", fmt(m.totalTax), STEEL);
 
-      // ════════════════════════════════════════
-      // PAGE 2 — Quarterly Breakdown
-      // ════════════════════════════════════════
+      // PAGE 2
       newPage();
 
       f("bold", 16); tc(NAVY);
@@ -275,7 +261,6 @@ export default function Export({ data }) {
         y += 8;
       });
 
-      // Full Year Totals
       checkPage(110);
       y += 4;
       sectionLabel("Full Year Totals");
@@ -305,9 +290,7 @@ export default function Export({ data }) {
         y += 16;
       });
 
-      // ════════════════════════════════════════
       // Expenses + Mileage
-      // ════════════════════════════════════════
       const expMilNeeded = 80 + Math.max(expensesByCategory.length, 1) * 16 + 120;
       checkPage(expMilNeeded);
 
@@ -377,7 +360,6 @@ export default function Export({ data }) {
         ML, y
       );
 
-      // ── Footer on every page ──
       const pageCount = doc.internal.getNumberOfPages();
       for (let p = 1; p <= pageCount; p++) {
         doc.setPage(p);
@@ -430,41 +412,76 @@ export default function Export({ data }) {
         <button onClick={() => { setYear(y => y + 1); setPdfReady(false); }} style={{ ...S.btnSecondary, padding: "8px 14px" }}>→</button>
       </div>
 
-      {/* Quarterly cards */}
+      {/* Quarterly cards — larger, more legible */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
         {quarters.map((q) => {
           const m = q.metrics;
           return (
-            <div key={q.label} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: "14px 16px", borderTop: `3px solid ${qColor}` }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: qColor }}>{q.label}</div>
-                  <div style={{ fontSize: 10, color: C.textMuted }}>{q.period}</div>
-                </div>
-                <div style={{ fontSize: 10, color: C.textMuted, textAlign: "right" }}>
-                  Due {q.due}<br/>
-                  <span style={{ color: C.textSecondary }}>{q.jobs.length} jobs</span>
-                </div>
+            <div key={q.label} style={{
+              background:   C.surface,
+              border:       `1px solid ${C.border}`,
+              borderRadius: 12,
+              padding:      "18px 16px",
+              borderTop:    `4px solid ${qColor}`,
+            }}>
+              {/* Quarter label + period */}
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: qColor, marginBottom: 2 }}>{q.label}</div>
+                <div style={{ fontSize: 11, color: C.textSecondary }}>{q.period}</div>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+
+              {/* Data rows */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
                 {[
                   ["Revenue",  fmt(m.revenue),  C.green],
                   ["Expenses", fmt(m.expTotal),  C.red],
                   ["Mileage",  `${m.miles} mi`,  C.textSecondary],
                 ].map(([l, v, c]) => (
-                  <div key={l} style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-                    <span style={{ color: C.textSecondary }}>{l}</span>
-                    <span style={{ color: c, fontWeight: 600 }}>{v}</span>
+                  <div key={l} style={{
+                    display:       "flex",
+                    justifyContent: "space-between",
+                    alignItems:    "center",
+                    padding:       "7px 0",
+                    borderBottom:  `1px solid ${C.border}`,
+                  }}>
+                    <span style={{ fontSize: 12, color: C.textSecondary }}>{l}</span>
+                    <span style={{ fontSize: 13, color: c, fontWeight: 600 }}>{v}</span>
                   </div>
                 ))}
-                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 6, display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-                  <span style={{ color: C.textSecondary }}>Net Profit</span>
-                  <span style={{ color: m.netProfit >= 0 ? C.green : C.red, fontWeight: 600 }}>{fmt(m.netProfit)}</span>
+
+                {/* Net Profit */}
+                <div style={{
+                  display:        "flex",
+                  justifyContent: "space-between",
+                  alignItems:     "center",
+                  padding:        "8px 0",
+                  borderBottom:   `1px solid ${C.border}`,
+                }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: C.textPrimary }}>Net Profit</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: m.netProfit >= 0 ? C.green : C.red }}>
+                    {fmt(m.netProfit)}
+                  </span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-                  <span style={{ color: C.textSecondary }}>Tax Est.</span>
-                  <span style={{ color: C.yellow, fontWeight: 600 }}>{fmt(m.totalTax)}</span>
+
+                {/* Tax Est */}
+                <div style={{
+                  display:        "flex",
+                  justifyContent: "space-between",
+                  alignItems:     "center",
+                  padding:        "8px 0 2px",
+                }}>
+                  <span style={{ fontSize: 12, color: C.textSecondary }}>Tax Est.</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: C.yellow }}>
+                    {fmt(m.totalTax)}
+                  </span>
                 </div>
+              </div>
+
+              {/* Job count footer */}
+              <div style={{ marginTop: 10, paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
+                <span style={{ fontSize: 11, color: C.textMuted }}>
+                  {q.jobs.length} job{q.jobs.length !== 1 ? "s" : ""}  ·  Due {q.due}
+                </span>
               </div>
             </div>
           );
@@ -482,16 +499,16 @@ export default function Export({ data }) {
           ["SE Tax (15.3%)",    fmt(annual.metrics.seTax),      C.yellow],
           ["Federal Tax Est.",  fmt(annual.metrics.fedTax),     C.yellow],
         ].map(([label, value, color]) => (
-          <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: `1px solid ${C.border}` }}>
-            <span style={{ fontSize: 12, color: C.textSecondary }}>{label}</span>
-            <span style={{ fontSize: 13, color, fontWeight: 600 }}>{value}</span>
+          <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", borderBottom: `1px solid ${C.border}` }}>
+            <span style={{ fontSize: 13, color: C.textSecondary }}>{label}</span>
+            <span style={{ fontSize: 14, color, fontWeight: 600 }}>{value}</span>
           </div>
         ))}
         <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0 4px" }}>
-          <span style={{ fontSize: 13, fontWeight: 700 }}>Total Tax Estimate</span>
-          <span style={{ fontSize: 16, color: C.yellow, fontWeight: 700 }}>{fmt(annual.metrics.totalTax)}</span>
+          <span style={{ fontSize: 14, fontWeight: 700 }}>Total Tax Estimate</span>
+          <span style={{ fontSize: 17, color: C.yellow, fontWeight: 700 }}>{fmt(annual.metrics.totalTax)}</span>
         </div>
-        <div style={{ fontSize: 11, color: C.textMuted }}>
+        <div style={{ fontSize: 12, color: C.textSecondary, marginTop: 4 }}>
           Quarterly payment: <span style={{ color: C.accent, fontWeight: 600 }}>{fmt(annual.metrics.totalTax / 4)}</span> per quarter
         </div>
       </div>
@@ -515,13 +532,13 @@ export default function Export({ data }) {
             {sharing ? "Opening Share..." : "Share / Save PDF ↗"}
           </button>
         )}
-        <div style={{ fontSize: 11, color: C.textMuted, textAlign: "center" }}>
+        <div style={{ fontSize: 12, color: C.textSecondary, textAlign: "center" }}>
           {pdfReady
             ? "PDF ready — tap Share to send to Mail, Files, or AirDrop"
             : "Tap Build to generate your annual PDF report"}
         </div>
         {!hasData && (
-          <div style={{ fontSize: 11, color: C.textMuted, marginTop: 8, textAlign: "center" }}>
+          <div style={{ fontSize: 12, color: C.textMuted, marginTop: 8, textAlign: "center" }}>
             No data for {year} — add jobs, expenses, or mileage first.
           </div>
         )}
