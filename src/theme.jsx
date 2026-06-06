@@ -11,10 +11,19 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     localStorage.setItem("oms-theme", isDark ? "dark" : "light");
-    // Sync document background so no flash on load or theme switch
     document.body.style.background = isDark ? DARK.bg : LIGHT.bg;
     document.body.style.color      = isDark ? DARK.textPrimary : LIGHT.textPrimary;
+    // Also set on html element to cover overscroll areas on iPhone
+    document.documentElement.style.background = isDark ? DARK.bg : LIGHT.bg;
   }, [isDark]);
+
+  // Apply immediately on first render before paint
+  if (typeof document !== "undefined") {
+    const saved = localStorage.getItem("oms-theme");
+    const dark  = saved ? saved === "dark" : true;
+    document.body.style.background = dark ? DARK.bg : LIGHT.bg;
+    document.documentElement.style.background = dark ? DARK.bg : LIGHT.bg;
+  }
 
   const C = isDark ? DARK : LIGHT;
   const S = makeStyles(C);
