@@ -1,5 +1,5 @@
 // styles.js
-// Stripe-inspired palette · Roboto · SF Pro fallback on iPhone
+// Stripe-inspired palette · Helvetica Neue · cohesive with PDF documents
 
 export const DARK = {
   bg:          "#000000",   // pure black — iOS Stocks
@@ -33,7 +33,7 @@ export const LIGHT = {
   textMuted:     "#8898aa", // Stripe muted text
 };
 
-const FONT = "'Roboto', -apple-system, BlinkMacSystemFont, sans-serif";
+const FONT = "'Helvetica Neue', Helvetica, Arial, sans-serif";
 
 export function makeStyles(C) {
   return {
@@ -166,7 +166,7 @@ export function makeStyles(C) {
     },
     statValue: {
       fontSize:   24,
-      fontWeight: 600,
+      fontWeight: 500,  // dropped from 600 — Helvetica reads cleaner at 500
       color:      C.textPrimary,
     },
     tag: (color) => ({
