@@ -13,7 +13,6 @@ export function ThemeProvider({ children }) {
     localStorage.setItem("oms-theme", isDark ? "dark" : "light");
     document.body.style.background = isDark ? DARK.bg : LIGHT.bg;
     document.body.style.color      = isDark ? DARK.textPrimary : LIGHT.textPrimary;
-    // Also set on html element to cover overscroll areas on iPhone
     document.documentElement.style.background = isDark ? DARK.bg : LIGHT.bg;
   }, [isDark]);
 
@@ -26,7 +25,7 @@ export function ThemeProvider({ children }) {
   }
 
   const C = isDark ? DARK : LIGHT;
-  const S = makeStyles(C);
+  const S = makeStyles(C, isDark); // now passes isDark so cards behave correctly per mode
 
   return (
     <ThemeContext.Provider value={{ C, S, isDark, toggleTheme: () => setIsDark(d => !d) }}>
