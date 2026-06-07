@@ -11,33 +11,43 @@ function fmtMiles(val) {
 }
 
 function Receipt({ job, onDone }) {
-  const { C, S } = useTheme();
+  const { S } = useTheme();
   const isLiftTruck = job.jobType === "lift_truck";
+
   return (
     <div>
-      <div style={{ ...S.card, background: "#fff", color: "#111", fontFamily: "inherit" }} className="print-area">
+      {/* Back button */}
+      <div style={{ marginBottom: 16 }} className="no-print">
+        <button style={S.btnSecondary} onClick={onDone}>← Back</button>
+      </div>
+
+      {/* Receipt card */}
+      <div style={{ ...S.card, background: "#fff", color: "#111" }} className="print-area">
+
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, paddingBottom: 14, borderBottom: "2px solid #635bff" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, paddingBottom: 14, borderBottom: "2px solid #3b82f6" }}>
           <div>
-            <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: "0.05em" }}>OCASIO</div>
+            <div style={{ fontSize: 20, fontWeight: 700 }}>OCASIO</div>
             <div style={{ fontSize: 11, color: "#666", letterSpacing: "0.1em" }}>MECHANICAL SERVICES LLC</div>
             <div style={{ fontSize: 10, color: "#999" }}>Mobile Mechanical Service · Florida</div>
           </div>
           <div style={{ textAlign: "right" }}>
             <div style={{ fontSize: 10, color: "#999", textTransform: "uppercase" }}>Receipt</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#635bff" }}>{job.jobNumber}</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#3b82f6" }}>{job.jobNumber}</div>
             <div style={{ fontSize: 10, color: "#999" }}>{job.date}</div>
           </div>
         </div>
 
-        {/* Bill To + Equipment/Vehicle */}
+        {/* Bill To + Vehicle/Equipment */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
           <div>
             <div style={{ fontSize: 10, color: "#999", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Bill To</div>
             <div style={{ fontSize: 13, fontWeight: 600 }}>{job.customerName}</div>
             <div style={{ fontSize: 12, color: "#555" }}>{job.customerPhone}</div>
             <div style={{ fontSize: 12, color: "#555" }}>{job.customerAddress}</div>
-            {job.customerCity && <div style={{ fontSize: 12, color: "#555" }}>{job.customerCity}, FL {job.customerZip}</div>}
+            {job.customerCity && (
+              <div style={{ fontSize: 12, color: "#555" }}>{job.customerCity}, FL {job.customerZip}</div>
+            )}
           </div>
           <div>
             <div style={{ fontSize: 10, color: "#999", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>
@@ -63,7 +73,15 @@ function Receipt({ job, onDone }) {
           <thead>
             <tr style={{ borderBottom: "1px solid #ddd" }}>
               {["Service", "Labor", "Parts", "Total"].map(h => (
-                <th key={h} style={{ textAlign: h === "Service" ? "left" : "right", fontSize: 10, color: "#999", fontWeight: 400, padding: "4px 0", textTransform: "uppercase", letterSpacing: "0.1em" }}>{h}</th>
+                <th key={h} style={{
+                  textAlign:     h === "Service" ? "left" : "right",
+                  fontSize:      10,
+                  color:         "#999",
+                  fontWeight:    400,
+                  padding:       "4px 0",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -85,14 +103,15 @@ function Receipt({ job, onDone }) {
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#666", marginBottom: 4 }}><span>Parts</span><span>{fmt(job.parts)}</span></div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#666", marginBottom: 8 }}><span>Tax (7% on parts)</span><span>{fmt(job.tax)}</span></div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, fontWeight: 700, borderTop: "2px solid #111", paddingTop: 8 }}>
-            <span>GRAND TOTAL</span><span style={{ color: "#635bff" }}>{fmt(job.grandTotal)}</span>
+            <span>GRAND TOTAL</span>
+            <span style={{ color: "#3b82f6" }}>{fmt(job.grandTotal)}</span>
           </div>
           <div style={{ fontSize: 11, color: "#999", marginTop: 4 }}>Payment: {job.payMethod}</div>
         </div>
 
         {/* AI Notes */}
         {job.aiNotes && (
-          <div style={{ background: "#f9f9f9", borderLeft: "3px solid #635bff", padding: "10px 12px", fontSize: 12, color: "#555", lineHeight: 1.6, marginBottom: 12, borderRadius: "0 6px 6px 0" }}>
+          <div style={{ background: "#f9f9f9", borderLeft: "3px solid #3b82f6", padding: "10px 12px", fontSize: 12, color: "#555", lineHeight: 1.6, marginBottom: 12, borderRadius: "0 6px 6px 0" }}>
             {job.aiNotes}
           </div>
         )}
@@ -109,18 +128,19 @@ function Receipt({ job, onDone }) {
         <div style={{ borderTop: "1px solid #eee", paddingTop: 12, textAlign: "center" }}>
           <div style={{ fontSize: 12, fontWeight: 700 }}>PAYMENT DUE UPON RECEIPT</div>
           <div style={{ fontSize: 11, color: "#999" }}>Make checks payable to: Ocasio Mechanical Services, LLC</div>
-          <div style={{ fontSize: 12, color: "#635bff", marginTop: 6, fontWeight: 700 }}>Thank You For Your Business!</div>
+          <div style={{ fontSize: 12, color: "#3b82f6", marginTop: 6, fontWeight: 700 }}>Thank You For Your Business!</div>
         </div>
       </div>
 
+      {/* Share + Print */}
       <ShareButtons job={job} />
-      <div style={{ display: "flex", gap: 10, marginTop: 10 }} className="no-print">
-        <button style={{ ...S.btnSecondary, flex: 1 }} onClick={onDone}>← Dashboard</button>
-        <button style={{ ...S.btnPrimary, flex: 1 }} onClick={() => window.print()}>Print / Save PDF</button>
-      </div>
-      <p style={{ fontSize: 11, color: "#999", textAlign: "center", marginTop: 8 }} className="no-print">
-        Mac: File → Print → PDF · iPhone: Share → Print → pinch to zoom
-      </p>
+      <button
+        style={{ ...S.btnPrimary, width: "100%", marginTop: 10 }}
+        className="no-print"
+        onClick={() => window.print()}
+      >
+        Print / Save PDF
+      </button>
     </div>
   );
 }
@@ -129,25 +149,15 @@ export default function NewJob({ data, setData, onDone }) {
   const { C, S } = useTheme();
   const [step, setStep] = useState(0);
 
-  // Job type — automotive or lift_truck
   const [jobType, setJobType] = useState("automotive");
-
   const [custMode, setCustMode] = useState("existing");
   const [selectedCustomer, setSelectedCustomer] = useState("");
   const [selectedVehicle, setSelectedVehicle] = useState("");
-
-  // Customer autofill
   const [custSearch, setCustSearch] = useState("");
   const [custSearchActive, setCustSearchActive] = useState(false);
-
   const [newCust, setNewCust] = useState({ name: "", phone: "", email: "", address: "", city: "", zip: "" });
-
-  // Automotive vehicle fields
   const [newVeh, setNewVeh] = useState({ year: "", make: "", model: "", color: "" });
-
-  // Lift truck fields
   const [newEquip, setNewEquip] = useState({ make: "", model: "", serial: "", hour_meter: "" });
-
   const [vehMode, setVehMode] = useState("existing");
   const [date, setDate] = useState(today());
   const [mileage, setMileage] = useState("");
@@ -155,7 +165,6 @@ export default function NewJob({ data, setData, onDone }) {
 
   const servicesList = jobType === "lift_truck" ? LIFT_TRUCK_SERVICES : SERVICES;
   const [lines, setLines] = useState([{ service: SERVICES[0].name, labor: 100, parts: 50 }]);
-
   const [payMethod, setPayMethod] = useState("Cash");
   const [techNotes, setTechNotes] = useState("");
   const [generating, setGenerating] = useState(false);
@@ -164,7 +173,6 @@ export default function NewJob({ data, setData, onDone }) {
   const customers = data.customers || [];
   const vehicles  = data.vehicles  || [];
 
-  // Filter vehicles by job type for existing selection
   const custVehicles = selectedCustomer
     ? vehicles.filter(v =>
         (v.customer_id === selectedCustomer || v.customerId === selectedCustomer) &&
@@ -191,7 +199,6 @@ export default function NewJob({ data, setData, onDone }) {
     if (cvs.length === 1) setSelectedVehicle(cvs[0].id);
   }
 
-  // When job type changes reset vehicle selection and service lines
   function handleJobTypeChange(type) {
     setJobType(type);
     setSelectedVehicle("");
@@ -231,26 +238,13 @@ export default function NewJob({ data, setData, onDone }) {
 
     if (vehMode === "new" || !vehObj) {
       const nv = isLiftTruck
-        ? {
-            ...newEquip,
-            job_type: "lift_truck",
-            customer_id: custObj?.id,
-            id: uid(),
-            created_at: today(),
-          }
-        : {
-            ...newVeh,
-            job_type: "automotive",
-            customer_id: custObj?.id,
-            id: uid(),
-            created_at: today(),
-          };
+        ? { ...newEquip, job_type: "lift_truck", customer_id: custObj?.id, id: uid(), created_at: today() }
+        : { ...newVeh, job_type: "automotive", customer_id: custObj?.id, id: uid(), created_at: today() };
       await saveData("vehicles", nv);
       vehObj = nv;
       setData(prev => ({ ...prev, vehicles: [...(prev.vehicles || []), nv] }));
     }
 
-    // AI notes — adapts per job type
     const equipmentLine = isLiftTruck
       ? `Lift Truck: ${vehObj?.make} ${vehObj?.model}${vehObj?.serial ? ` S/N ${vehObj.serial}` : ""} at ${newEquip.hour_meter || vehObj?.hour_meter || "unknown"} hours`
       : `Vehicle: ${vehObj?.year} ${vehObj?.make} ${vehObj?.model} at ${mileage} miles`;
@@ -319,36 +313,35 @@ export default function NewJob({ data, setData, onDone }) {
     };
 
     await saveData("jobs", {
-      id:             job.id,
-      job_number:     job.job_number,
-      job_type:       job.job_type,
-      date:           job.date,
-      mileage:        job.mileage,
-      hour_meter:     job.hour_meter,
-      customer_id:    job.customer_id,
-      customer_name:  job.customerName,
-      customer_phone: job.customerPhone,
-      customer_email: job.customerEmail,
+      id:               job.id,
+      job_number:       job.job_number,
+      job_type:         job.job_type,
+      date:             job.date,
+      mileage:          job.mileage,
+      hour_meter:       job.hour_meter,
+      customer_id:      job.customer_id,
+      customer_name:    job.customerName,
+      customer_phone:   job.customerPhone,
+      customer_email:   job.customerEmail,
       customer_address: job.customerAddress,
-      customer_city:  job.customerCity,
-      customer_zip:   job.customerZip,
-      vehicle_id:     job.vehicle_id,
-      vehicle_year:   job.vehicleYear,
-      vehicle_make:   job.vehicleMake,
-      vehicle_model:  job.vehicleModel,
-      vehicle_serial: job.vehicleSerial,
-      lines:          job.lines,
-      labor:          job.labor,
-      parts:          job.parts,
-      tax:            job.tax,
-      grand_total:    job.grandTotal,
-      pay_method:     job.payMethod,
-      tech_notes:     job.techNotes,
-      ai_notes:       job.aiNotes,
-      created_at:     job.created_at,
+      customer_city:    job.customerCity,
+      customer_zip:     job.customerZip,
+      vehicle_id:       job.vehicle_id,
+      vehicle_year:     job.vehicleYear,
+      vehicle_make:     job.vehicleMake,
+      vehicle_model:    job.vehicleModel,
+      vehicle_serial:   job.vehicleSerial,
+      lines:            job.lines,
+      labor:            job.labor,
+      parts:            job.parts,
+      tax:              job.tax,
+      grand_total:      job.grandTotal,
+      pay_method:       job.payMethod,
+      tech_notes:       job.techNotes,
+      ai_notes:         job.aiNotes,
+      created_at:       job.created_at,
     });
 
-    // Travel mileage log — always log, regardless of job type
     const rawTravel = travelMiles.replace(/,/g, "");
     if (rawTravel && Number(rawTravel) > 0) {
       const purposeEquip = isLiftTruck
@@ -394,7 +387,6 @@ export default function NewJob({ data, setData, onDone }) {
         <div style={S.card}>
           <div style={S.cardTitle}>New Job</div>
 
-          {/* Job type toggle */}
           <div style={{ marginBottom: 18 }}>
             <label style={S.label}>Job Type</label>
             <div style={{ display: "flex", gap: 8 }}>
@@ -406,17 +398,13 @@ export default function NewJob({ data, setData, onDone }) {
                   key={opt.value}
                   onClick={() => handleJobTypeChange(opt.value)}
                   style={{
-                    flex: 1,
-                    padding: "10px 8px",
+                    flex: 1, padding: "10px 8px",
                     background: jobType === opt.value ? C.accent : C.elevated,
                     border: `1px solid ${jobType === opt.value ? C.accent : C.border}`,
                     borderRadius: 8,
                     color: jobType === opt.value ? "#fff" : C.textSecondary,
-                    fontSize: 13,
-                    fontWeight: jobType === opt.value ? 600 : 400,
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                    transition: "all 0.15s",
+                    fontSize: 13, fontWeight: jobType === opt.value ? 600 : 400,
+                    cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
                   }}
                 >
                   {opt.label}
@@ -425,7 +413,6 @@ export default function NewJob({ data, setData, onDone }) {
             </div>
           </div>
 
-          {/* Customer mode toggle */}
           <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
             {["existing", "new"].map(m => (
               <button key={m} onClick={() => { setCustMode(m); setCustSearch(""); setSelectedCustomer(""); }}
@@ -518,179 +505,4 @@ export default function NewJob({ data, setData, onDone }) {
         <div style={S.card}>
           <div style={S.cardTitle}>{isLiftTruck ? "Lift Truck" : "Vehicle"}</div>
 
-          {custVehicles.length > 0 && (
-            <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-              {["existing", "new"].map(m => (
-                <button key={m} onClick={() => setVehMode(m)}
-                  style={{ ...m === vehMode ? S.btnPrimary : S.btnSecondary, flex: 1, padding: "8px" }}>
-                  {m === "existing"
-                    ? `Existing ${isLiftTruck ? "Lift Truck" : "Vehicle"}`
-                    : `New ${isLiftTruck ? "Lift Truck" : "Vehicle"}`}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Existing vehicle/equipment selector */}
-          {(vehMode === "existing" && custVehicles.length > 0) ? (
-            <Input
-              label={`Select ${isLiftTruck ? "Lift Truck" : "Vehicle"}`}
-              as="select"
-              value={selectedVehicle}
-              onChange={e => setSelectedVehicle(e.target.value)}
-            >
-              <option value="">Choose {isLiftTruck ? "lift truck" : "vehicle"}...</option>
-              {custVehicles.map(v => (
-                <option key={v.id} value={v.id}>
-                  {isLiftTruck
-                    ? `${v.make} ${v.model}${v.serial ? ` · S/N ${v.serial}` : ""}`
-                    : `${v.year} ${v.make} ${v.model}`}
-                </option>
-              ))}
-            </Input>
-          ) : isLiftTruck ? (
-            /* Lift truck fields */
-            <>
-              <div style={S.grid2}>
-                <Input label="Make *" value={newEquip.make} onChange={e => setNewEquip({ ...newEquip, make: e.target.value })} placeholder="Yale" />
-                <Input label="Model *" value={newEquip.model} onChange={e => setNewEquip({ ...newEquip, model: e.target.value })} placeholder="ERC040" />
-              </div>
-              <Input label="Serial Number" value={newEquip.serial} onChange={e => setNewEquip({ ...newEquip, serial: e.target.value })} placeholder="Serial number" />
-              <Input label="Hour Meter" type="number" inputMode="decimal" value={newEquip.hour_meter} onChange={e => setNewEquip({ ...newEquip, hour_meter: e.target.value })} placeholder="e.g. 4500" />
-            </>
-          ) : (
-            /* Automotive fields */
-            <>
-              <div style={S.grid3}>
-                <Input label="Year *" value={newVeh.year} onChange={e => setNewVeh({ ...newVeh, year: e.target.value })} placeholder="2020" />
-                <Input label="Make *" value={newVeh.make} onChange={e => setNewVeh({ ...newVeh, make: e.target.value })} placeholder="Toyota" />
-                <Input label="Model *" value={newVeh.model} onChange={e => setNewVeh({ ...newVeh, model: e.target.value })} placeholder="Camry" />
-              </div>
-              <Input label="Color" value={newVeh.color} onChange={e => setNewVeh({ ...newVeh, color: e.target.value })} placeholder="Silver" />
-            </>
-          )}
-
-          {/* Mileage for automotive, hour meter update for lift truck on existing */}
-          {!isLiftTruck && (
-            <Input
-              label="Current Mileage"
-              type="text"
-              inputMode="numeric"
-              value={mileage}
-              onChange={e => setMileage(fmtMiles(e.target.value))}
-              placeholder="e.g. 45,000"
-            />
-          )}
-
-          {/* Hour meter update for existing lift truck */}
-          {isLiftTruck && vehMode === "existing" && selectedVehicle && (
-            <Input
-              label="Current Hour Meter Reading"
-              type="number"
-              inputMode="decimal"
-              value={newEquip.hour_meter}
-              onChange={e => setNewEquip({ ...newEquip, hour_meter: e.target.value })}
-              placeholder="e.g. 4500"
-            />
-          )}
-
-          <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-            <button style={{ ...S.btnSecondary, flex: 1 }} onClick={() => setStep(0)}>← Back</button>
-            <button style={{ ...S.btnPrimary, flex: 1 }} onClick={() => setStep(2)}>Next → Services</button>
-          </div>
-        </div>
-      )}
-
-      {/* ── STEP 2: Services ── */}
-      {step === 2 && (
-        <div style={S.card}>
-          <div style={S.cardTitle}>Services Performed</div>
-          {lines.map((line, i) => (
-            <div key={i} style={{ background: C.elevated, borderRadius: 6, padding: 12, marginBottom: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <span style={{ fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em" }}>Line {i + 1}</span>
-                {lines.length > 1 && (
-                  <button onClick={() => setLines(lines.filter((_, idx) => idx !== i))}
-                    style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 18 }}>×</button>
-                )}
-              </div>
-              <Input as="select" value={line.service} onChange={e => updateLine(i, "service", e.target.value)}>
-                {servicesList.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
-              </Input>
-              <div style={S.grid2}>
-                <Input label="Labor ($)" type="number" inputMode="decimal" value={line.labor} onChange={e => updateLine(i, "labor", e.target.value)} onFocus={e => e.target.select()} />
-                <Input label="Parts ($)" type="number" inputMode="decimal" value={line.parts} onChange={e => updateLine(i, "parts", e.target.value)} onFocus={e => e.target.select()} />
-              </div>
-            </div>
-          ))}
-          <button
-            style={{ ...S.btnSecondary, width: "100%", marginBottom: 12 }}
-            onClick={() => setLines([...lines, { service: servicesList[0].name, labor: servicesList[0].labor, parts: servicesList[0].parts }])}
-          >
-            + Add Service Line
-          </button>
-          <Input label="Tech Notes" as="textarea" value={techNotes} onChange={e => setTechNotes(e.target.value)} placeholder="Observations, recommendations..." />
-
-          {/* Travel miles — always shown */}
-          <div style={{ background: C.elevated, borderRadius: 6, padding: "10px 14px", marginBottom: 12, borderLeft: `3px solid ${C.accent}` }}>
-            <div style={{ fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Internal — Not shown on receipt</div>
-            <Input
-              label="Travel Miles (round trip or one-way)"
-              type="text"
-              inputMode="numeric"
-              value={travelMiles}
-              onChange={e => setTravelMiles(fmtMiles(e.target.value))}
-              placeholder="e.g. 12"
-            />
-            {travelMiles ? (
-              <div style={{ fontSize: 11, color: C.green, marginTop: -6, marginBottom: 4 }}>
-                Auto-logs {travelMiles} mi → {fmt(Number(travelMiles.replace(/,/g, "")) * MILEAGE_RATE)} mileage deduction
-              </div>
-            ) : (
-              <div style={{ fontSize: 11, color: C.textMuted, marginTop: -6, marginBottom: 4 }}>
-                Miles entered here auto-create a mileage log entry for this job.
-              </div>
-            )}
-          </div>
-
-          {/* Payment method */}
-          <div style={{ marginBottom: 12 }}>
-            <label style={S.label}>Payment Method</label>
-            <div style={{ display: "flex", gap: 8 }}>
-              {["Cash", "Card", "Venmo", "Zelle"].map(m => (
-                <button key={m} onClick={() => setPayMethod(m)}
-                  style={{
-                    flex: 1, padding: "8px 4px",
-                    background: payMethod === m ? C.accent : C.elevated,
-                    border: `1px solid ${payMethod === m ? C.accent : C.border}`,
-                    borderRadius: 6,
-                    color: payMethod === m ? "#fff" : C.textSecondary,
-                    fontSize: 12, cursor: "pointer", fontFamily: "inherit",
-                  }}>
-                  {m}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Totals preview */}
-          <div style={{ background: C.elevated, borderRadius: 6, padding: 12, marginBottom: 12 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C.textSecondary, marginBottom: 4 }}><span>Labor</span><span>{fmt(labor)}</span></div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C.textSecondary, marginBottom: 4 }}><span>Parts</span><span>{fmt(parts)}</span></div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C.textSecondary, marginBottom: 8 }}><span>Tax (7%)</span><span>{fmt(tax)}</span></div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, fontWeight: 700, borderTop: `1px solid ${C.border}`, paddingTop: 8 }}>
-              <span>Total</span><span style={{ color: C.accent }}>{fmt(grandTotal)}</span>
-            </div>
-          </div>
-
-          <div style={{ display: "flex", gap: 10 }}>
-            <button style={{ ...S.btnSecondary, flex: 1 }} onClick={() => setStep(1)}>← Back</button>
-            <button style={{ ...S.btnPrimary, flex: 1 }} onClick={generate} disabled={generating}>
-              {generating ? "Generating..." : "Generate Invoice →"}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+          {custVeh
