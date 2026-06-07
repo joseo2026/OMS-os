@@ -505,4 +505,171 @@ export default function NewJob({ data, setData, onDone }) {
         <div style={S.card}>
           <div style={S.cardTitle}>{isLiftTruck ? "Lift Truck" : "Vehicle"}</div>
 
-          {custVeh
+          {custVehicles.length > 0 && (
+            <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+              {["existing", "new"].map(m => (
+                <button key={m} onClick={() => setVehMode(m)}
+                  style={{ ...m === vehMode ? S.btnPrimary : S.btnSecondary, flex: 1, padding: "8px" }}>
+                  {m === "existing"
+                    ? `Existing ${isLiftTruck ? "Lift Truck" : "Vehicle"}`
+                    : `New ${isLiftTruck ? "Lift Truck" : "Vehicle"}`}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {(vehMode === "existing" && custVehicles.length > 0) ? (
+            <Input
+              label={`Select ${isLiftTruck ? "Lift Truck" : "Vehicle"}`}
+              as="select"
+              value={selectedVehicle}
+              onChange={e => setSelectedVehicle(e.target.value)}
+            >
+              <option value="">Choose {isLiftTruck ? "lift truck" : "vehicle"}...</option>
+              {custVehicles.map(v => (
+                <option key={v.id} value={v.id}>
+                  {isLiftTruck
+                    ? `${v.make} ${v.model}${v.serial ? ` · S/N ${v.serial}` : ""}`
+                    : `${v.year} ${v.make} ${v.model}`}
+                </option>
+              ))}
+            </Input>
+          ) : isLiftTruck ? (
+            <>
+              <div style={S.grid2}>
+                <Input label="Make *" value={newEquip.make} onChange={e => setNewEquip({ ...newEquip, make: e.target.value })} placeholder="Yale" />
+                <Input label="Model *" value={newEquip.model} onChange={e => setNewEquip({ ...newEquip, model: e.target.value })} placeholder="ERC040" />
+              </div>
+              <Input label="Serial Number" value={newEquip.serial} onChange={e => setNewEquip({ ...newEquip, serial: e.target.value })} placeholder="Serial number" />
+              <Input label="Hour Meter" type="number" inputMode="decimal" value={newEquip.hour_meter} onChange={e => setNewEquip({ ...newEquip, hour_meter: e.target.value })} placeholder="e.g. 4500" />
+            </>
+          ) : (
+            <>
+              <div style={S.grid3}>
+                <Input label="Year *" value={newVeh.year} onChange={e => setNewVeh({ ...newVeh, year: e.target.value })} placeholder="2020" />
+                <Input label="Make *" value={newVeh.make} onChange={e => setNewVeh({ ...newVeh, make: e.target.value })} placeholder="Toyota" />
+                <Input label="Model *" value={newVeh.model} onChange={e => setNewVeh({ ...newVeh, model: e.target.value })} placeholder="Camry" />
+              </div>
+              <Input label="Color" value={newVeh.color} onChange={e => setNewVeh({ ...newVeh, color: e.target.value })} placeholder="Silver" />
+            </>
+          )}
+
+          {!isLiftTruck && (
+            <Input
+              label="Current Mileage"
+              type="text"
+              inputMode="numeric"
+              value={mileage}
+              onChange={e => setMileage(fmtMiles(e.target.value))}
+              placeholder="e.g. 45,000"
+            />
+          )}
+
+          {isLiftTruck && vehMode === "existing" && selectedVehicle && (
+            <Input
+              label="Current Hour Meter Reading"
+              type="number"
+              inputMode="decimal"
+              value={newEquip.hour_meter}
+              onChange={e => setNewEquip({ ...newEquip, hour_meter: e.target.value })}
+              placeholder="e.g. 4500"
+            />
+          )}
+
+          <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+            <button style={{ ...S.btnSecondary, flex: 1 }} onClick={() => setStep(0)}>← Back</button>
+            <button style={{ ...S.btnPrimary, flex: 1 }} onClick={() => setStep(2)}>Next → Services</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── STEP 2: Services ── */}
+      {step === 2 && (
+        <div style={S.card}>
+          <div style={S.cardTitle}>Services Performed</div>
+          {lines.map((line, i) => (
+            <div key={i} style={{ background: C.elevated, borderRadius: 6, padding: 12, marginBottom: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <span style={{ fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em" }}>Line {i + 1}</span>
+                {lines.length > 1 && (
+                  <button onClick={() => setLines(lines.filter((_, idx) => idx !== i))}
+                    style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 18 }}>×</button>
+                )}
+              </div>
+              <Input as="select" value={line.service} onChange={e => updateLine(i, "service", e.target.value)}>
+                {servicesList.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+              </Input>
+              <div style={S.grid2}>
+                <Input label="Labor ($)" type="number" inputMode="decimal" value={line.labor} onChange={e => updateLine(i, "labor", e.target.value)} onFocus={e => e.target.select()} />
+                <Input label="Parts ($)" type="number" inputMode="decimal" value={line.parts} onChange={e => updateLine(i, "parts", e.target.value)} onFocus={e => e.target.select()} />
+              </div>
+            </div>
+          ))}
+          <button
+            style={{ ...S.btnSecondary, width: "100%", marginBottom: 12 }}
+            onClick={() => setLines([...lines, { service: servicesList[0].name, labor: servicesList[0].labor, parts: servicesList[0].parts }])}
+          >
+            + Add Service Line
+          </button>
+          <Input label="Tech Notes" as="textarea" value={techNotes} onChange={e => setTechNotes(e.target.value)} placeholder="Observations, recommendations..." />
+
+          <div style={{ background: C.elevated, borderRadius: 6, padding: "10px 14px", marginBottom: 12, borderLeft: `3px solid ${C.accent}` }}>
+            <div style={{ fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Internal — Not shown on receipt</div>
+            <Input
+              label="Travel Miles (round trip or one-way)"
+              type="text"
+              inputMode="numeric"
+              value={travelMiles}
+              onChange={e => setTravelMiles(fmtMiles(e.target.value))}
+              placeholder="e.g. 12"
+            />
+            {travelMiles ? (
+              <div style={{ fontSize: 11, color: C.green, marginTop: -6, marginBottom: 4 }}>
+                Auto-logs {travelMiles} mi → {fmt(Number(travelMiles.replace(/,/g, "")) * MILEAGE_RATE)} mileage deduction
+              </div>
+            ) : (
+              <div style={{ fontSize: 11, color: C.textMuted, marginTop: -6, marginBottom: 4 }}>
+                Miles entered here auto-create a mileage log entry for this job.
+              </div>
+            )}
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <label style={S.label}>Payment Method</label>
+            <div style={{ display: "flex", gap: 8 }}>
+              {["Cash", "Card", "Venmo", "Zelle"].map(m => (
+                <button key={m} onClick={() => setPayMethod(m)}
+                  style={{
+                    flex: 1, padding: "8px 4px",
+                    background: payMethod === m ? C.accent : C.elevated,
+                    border: `1px solid ${payMethod === m ? C.accent : C.border}`,
+                    borderRadius: 6,
+                    color: payMethod === m ? "#fff" : C.textSecondary,
+                    fontSize: 12, cursor: "pointer", fontFamily: "inherit",
+                  }}>
+                  {m}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ background: C.elevated, borderRadius: 6, padding: 12, marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C.textSecondary, marginBottom: 4 }}><span>Labor</span><span>{fmt(labor)}</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C.textSecondary, marginBottom: 4 }}><span>Parts</span><span>{fmt(parts)}</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C.textSecondary, marginBottom: 8 }}><span>Tax (7%)</span><span>{fmt(tax)}</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, fontWeight: 700, borderTop: `1px solid ${C.border}`, paddingTop: 8 }}>
+              <span>Total</span><span style={{ color: C.accent }}>{fmt(grandTotal)}</span>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: 10 }}>
+            <button style={{ ...S.btnSecondary, flex: 1 }} onClick={() => setStep(1)}>← Back</button>
+            <button style={{ ...S.btnPrimary, flex: 1 }} onClick={generate} disabled={generating}>
+              {generating ? "Generating..." : "Generate Invoice →"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
