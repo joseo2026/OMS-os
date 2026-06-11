@@ -9,16 +9,20 @@ export const supabase = createClient(
 export function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
+
 export function fmt(n) {
   return "$" + Number(n || 0).toFixed(2);
 }
+
 export function today() {
   return new Date().toISOString().slice(0, 10);
 }
+
 export function jobNum() {
   const n = new Date();
   return `OMS-${n.getFullYear()}${String(n.getMonth() + 1).padStart(2, "0")}${String(n.getDate()).padStart(2, "0")}-${String(n.getHours()).padStart(2, "0")}${String(n.getMinutes()).padStart(2, "0")}`;
 }
+
 export async function loadData() {
   try {
     const [customers, vehicles, jobs, expenses, mileage, appointments] = await Promise.all([
@@ -31,27 +35,29 @@ export async function loadData() {
     ]);
     return {
       customers: customers.data || [],
-      vehicles: vehicles.data || [],
-      jobs: jobs.data || [],
-      expenses: expenses.data || [],
-      mileage: mileage.data || [],
+      vehicles:  vehicles.data  || [],
+      jobs:      jobs.data      || [],
+      expenses:  expenses.data  || [],
+      mileage:   mileage.data   || [],
       appointments: appointments.data || [],
     };
   } catch {
     return defaultData;
   }
 }
+
 export async function saveData(table, row) {
-  try {
-    await supabase.from(table).upsert(row);
-  } catch (e) {
-    console.error("Save failed", e);
+  const { error } = await supabase.from(table).upsert(row);
+  if (error) {
+    console.error(`SAVE FAILED [${table}]:`, error.message, error.details, error.hint);
+    alert(`Save failed (${table}): ${error.message}`);
   }
 }
+
 export async function deleteData(table, id) {
-  try {
-    await supabase.from(table).delete().eq('id', id);
-  } catch (e) {
-    console.error("Delete failed", e);
+  const { error } = await supabase.from(table).delete().eq('id', id);
+  if (error) {
+    console.error(`DELETE FAILED [${table}]:`, error.message);
+    alert(`Delete failed (${table}): ${error.message}`);
   }
 }
