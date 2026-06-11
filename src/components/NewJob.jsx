@@ -19,7 +19,7 @@ function Receipt({ job, onDone }) {
         <button style={S.btnSecondary} onClick={onDone}>← Back</button>
       </div>
       <div style={{ ...S.card, background: "#fff", color: "#111" }} className="print-area">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, paddingBottom: 14, borderBottom: "2px solid #3b82f6" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, paddingBottom: 14, borderBottom: "2px solid #636af7" }}>
           <div>
             <div style={{ fontSize: 20, fontWeight: 700 }}>OCASIO</div>
             <div style={{ fontSize: 11, color: "#666", letterSpacing: "0.1em" }}>MECHANICAL SERVICES LLC</div>
@@ -27,7 +27,7 @@ function Receipt({ job, onDone }) {
           </div>
           <div style={{ textAlign: "right" }}>
             <div style={{ fontSize: 10, color: "#999", textTransform: "uppercase" }}>Receipt</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#3b82f6" }}>{job.jobNumber}</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#636af7" }}>{job.jobNumber}</div>
             <div style={{ fontSize: 10, color: "#999" }}>{job.date}</div>
           </div>
         </div>
@@ -81,12 +81,12 @@ function Receipt({ job, onDone }) {
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#666", marginBottom: 4 }}><span>Parts</span><span>{fmt(job.parts)}</span></div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#666", marginBottom: 8 }}><span>Tax (7% on parts)</span><span>{fmt(job.tax)}</span></div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, fontWeight: 700, borderTop: "2px solid #111", paddingTop: 8 }}>
-            <span>GRAND TOTAL</span><span style={{ color: "#3b82f6" }}>{fmt(job.grandTotal)}</span>
+            <span>GRAND TOTAL</span><span style={{ color: "#636af7" }}>{fmt(job.grandTotal)}</span>
           </div>
           <div style={{ fontSize: 11, color: "#999", marginTop: 4 }}>Payment: {job.payMethod}</div>
         </div>
         {job.aiNotes && (
-          <div style={{ background: "#f9f9f9", borderLeft: "3px solid #3b82f6", padding: "10px 12px", fontSize: 12, color: "#555", lineHeight: 1.6, marginBottom: 12, borderRadius: "0 6px 6px 0" }}>
+          <div style={{ background: "#f9f9f9", borderLeft: "3px solid #636af7", padding: "10px 12px", fontSize: 12, color: "#555", lineHeight: 1.6, marginBottom: 12, borderRadius: "0 6px 6px 0" }}>
             {job.aiNotes}
           </div>
         )}
@@ -99,7 +99,7 @@ function Receipt({ job, onDone }) {
         <div style={{ borderTop: "1px solid #eee", paddingTop: 12, textAlign: "center" }}>
           <div style={{ fontSize: 12, fontWeight: 700 }}>PAYMENT DUE UPON RECEIPT</div>
           <div style={{ fontSize: 11, color: "#999" }}>Make checks payable to: Ocasio Mechanical Services, LLC</div>
-          <div style={{ fontSize: 12, color: "#3b82f6", marginTop: 6, fontWeight: 700 }}>Thank You For Your Business!</div>
+          <div style={{ fontSize: 12, color: "#636af7", marginTop: 6, fontWeight: 700 }}>Thank You For Your Business!</div>
         </div>
       </div>
       <ShareButtons job={job} />
@@ -178,31 +178,58 @@ export default function NewJob({ data, setData, onDone }) {
   const parts      = lines.reduce((s, l) => s + Number(l.parts || 0), 0);
   const tax        = parts * FL_TAX;
   const grandTotal = labor + parts + tax;
+
   async function generate() {
     setGenerating(true);
     const isLiftTruck = jobType === "lift_truck";
     let custObj = customers.find(c => c.id === selectedCustomer);
     let vehObj  = vehicles.find(v => v.id === selectedVehicle);
+
+    // Save new customer
     if (custMode === "new") {
       const nc = { ...newCust, id: uid(), created_at: today() };
       await saveData("customers", nc);
       custObj = nc;
       setData(prev => ({ ...prev, customers: [...(prev.customers || []), nc] }));
     }
+
+    // Save new vehicle/equipment — explicit fields, null for empty numerics
     if (vehMode === "new" || !vehObj) {
       const nv = isLiftTruck
-        ? { ...newEquip, job_type: "lift_truck", customer_id: custObj?.id, id: uid(), created_at: today() }
-        : { ...newVeh, job_type: "automotive", customer_id: custObj?.id, id: uid(), created_at: today() };
+        ? {
+            id:          uid(),
+            created_at:  today(),
+            customer_id: custObj?.id,
+            job_type:    "lift_truck",
+            make:        newEquip.make,
+            model:       newEquip.model,
+            serial:      newEquip.serial || null,
+            hour_meter:  newEquip.hour_meter ? Number(newEquip.hour_meter) : null,
+          }
+        : {
+            id:          uid(),
+            created_at:  today(),
+            customer_id: custObj?.id,
+            job_type:    "automotive",
+            year:        newVeh.year,
+            make:        newVeh.make,
+            model:       newVeh.model,
+            color:       newVeh.color || null,
+          };
       await saveData("vehicles", nv);
       vehObj = nv;
       setData(prev => ({ ...prev, vehicles: [...(prev.vehicles || []), nv] }));
     }
+
+    // AI notes prompt
     const equipmentLine = isLiftTruck
       ? `Lift Truck: ${vehObj?.make} ${vehObj?.model}${vehObj?.serial ? ` S/N ${vehObj.serial}` : ""} at ${newEquip.hour_meter || vehObj?.hour_meter || "unknown"} hours`
       : `Vehicle: ${vehObj?.year} ${vehObj?.make} ${vehObj?.model} at ${mileage} miles`;
+
     let aiNotes = isLiftTruck
       ? "Thank you for choosing Ocasio Mechanical Services. Your lift truck has been serviced to manufacturer specifications. We recommend scheduling your next preventive maintenance based on your operation's hour meter intervals."
       : "Thank you for choosing Ocasio Mechanical Services. Your vehicle has been serviced with quality parts and professional care. We look forward to seeing you at your next scheduled maintenance.";
+
     try {
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -221,53 +248,107 @@ export default function NewJob({ data, setData, onDone }) {
     } catch (e) {
       console.warn("AI notes unavailable, using fallback");
     }
-    const jn  = jobNum();
+
+    const jn = jobNum();
+    const hmValue = isLiftTruck ? (newEquip.hour_meter || vehObj?.hour_meter || null) : null;
+
+    // Build job object — camelCase for app, snake_case for Supabase
     const job = {
-      id: uid(), job_number: jn, jobNumber: jn, job_type: jobType, jobType, date,
+      id: uid(),
+      job_number: jn,
+      jobNumber: jn,
+      job_type: jobType,
+      jobType,
+      date,
       mileage: isLiftTruck ? "" : mileage.replace(/,/g, ""),
-      hour_meter: isLiftTruck ? (newEquip.hour_meter || vehObj?.hour_meter || "") : "",
-      hourMeter:  isLiftTruck ? (newEquip.hour_meter || vehObj?.hour_meter || "") : "",
-      customer_id: custObj?.id, customerId: custObj?.id,
-      customerName: custObj?.name, customerPhone: custObj?.phone, customerEmail: custObj?.email,
-      customerAddress: custObj?.address, customerCity: custObj?.city, customerZip: custObj?.zip,
-      vehicle_id: vehObj?.id, vehicleId: vehObj?.id,
-      vehicleYear: isLiftTruck ? "" : vehObj?.year,
-      vehicleMake: vehObj?.make, vehicleModel: vehObj?.model,
-      vehicleSerial: isLiftTruck ? vehObj?.serial : "",
-      lines, labor, parts, tax, grand_total: grandTotal, grandTotal,
-      pay_method: payMethod, payMethod, tech_notes: techNotes, techNotes,
-      ai_notes: aiNotes, aiNotes, created_at: new Date().toISOString(),
+      hour_meter: hmValue ? Number(hmValue) : null,
+      hourMeter: hmValue || "",
+      customer_id: custObj?.id,
+      customerId: custObj?.id,
+      customerName: custObj?.name,
+      customerPhone: custObj?.phone,
+      customerEmail: custObj?.email,
+      customerAddress: custObj?.address,
+      customerCity: custObj?.city,
+      customerZip: custObj?.zip,
+      vehicle_id: vehObj?.id,
+      vehicleId: vehObj?.id,
+      vehicleYear: isLiftTruck ? "" : (vehObj?.year || ""),
+      vehicleMake: vehObj?.make,
+      vehicleModel: vehObj?.model,
+      vehicleSerial: isLiftTruck ? (vehObj?.serial || "") : "",
+      lines,
+      labor,
+      parts,
+      tax,
+      grand_total: grandTotal,
+      grandTotal,
+      pay_method: payMethod,
+      payMethod,
+      tech_notes: techNotes,
+      techNotes,
+      ai_notes: aiNotes,
+      aiNotes,
+      created_at: new Date().toISOString(),
     };
+
+    // Save job to Supabase — only columns that exist in the table, null for empty numerics
     await saveData("jobs", {
-      id: job.id, job_number: job.job_number, job_type: job.job_type, date: job.date,
-      mileage: job.mileage, hour_meter: job.hour_meter,
-      customer_id: job.customer_id, customer_name: job.customerName,
-      customer_phone: job.customerPhone, customer_email: job.customerEmail,
-      customer_address: job.customerAddress, customer_city: job.customerCity, customer_zip: job.customerZip,
-      vehicle_id: job.vehicle_id, vehicle_year: job.vehicleYear, vehicle_make: job.vehicleMake,
-      vehicle_model: job.vehicleModel, vehicle_serial: job.vehicleSerial,
-      lines: job.lines, labor: job.labor, parts: job.parts, tax: job.tax,
-      grand_total: job.grandTotal, pay_method: job.payMethod,
-      tech_notes: job.techNotes, ai_notes: job.aiNotes, created_at: job.created_at,
+      id:               job.id,
+      job_number:       job.job_number,
+      job_type:         job.job_type,
+      date:             job.date,
+      mileage:          job.mileage || null,
+      hour_meter:       job.hour_meter,
+      customer_id:      job.customer_id,
+      customer_name:    job.customerName,
+      customer_phone:   job.customerPhone || null,
+      customer_email:   job.customerEmail || null,
+      customer_address: job.customerAddress || null,
+      customer_city:    job.customerCity || null,
+      customer_zip:     job.customerZip || null,
+      vehicle_id:       job.vehicle_id,
+      vehicle_year:     job.vehicleYear || null,
+      vehicle_make:     job.vehicleMake,
+      vehicle_model:    job.vehicleModel,
+      vehicle_serial:   job.vehicleSerial || null,
+      lines:            job.lines,
+      labor:            job.labor,
+      parts:            job.parts,
+      tax:              job.tax,
+      grand_total:      job.grandTotal,
+      pay_method:       job.payMethod,
+      tech_notes:       job.techNotes || null,
+      ai_notes:         job.aiNotes || null,
+      created_at:       job.created_at,
     });
+
+    // Travel mileage — from_loc/to_loc match SQL schema
     const rawTravel = travelMiles.replace(/,/g, "");
     if (rawTravel && Number(rawTravel) > 0) {
       const purposeEquip = isLiftTruck
         ? `Service call: ${custObj?.name || "customer"} — ${vehObj?.make || ""} ${vehObj?.model || ""} Lift Truck`.trim()
         : `Service call: ${custObj?.name || "customer"} — ${vehObj?.year || ""} ${vehObj?.make || ""} ${vehObj?.model || ""}`.trim();
       const mileEntry = {
-        id: uid(), date, miles: rawTravel, purpose: purposeEquip, from: "",
-        to: custObj?.address ? `${custObj.address}${custObj.city ? ", " + custObj.city : ""}` : "",
-        job_id: job.id, created_at: today(),
+        id:         uid(),
+        date,
+        miles:      Number(rawTravel),
+        purpose:    purposeEquip,
+        from_loc:   "",
+        to_loc:     custObj?.address ? `${custObj.address}${custObj.city ? ", " + custObj.city : ""}` : "",
+        job_id:     job.id,
+        created_at: today(),
       };
       await saveData("mileage", mileEntry);
       setData(prev => ({ ...prev, mileage: [...(prev.mileage || []), mileEntry] }));
     }
+
     setData(prev => ({ ...prev, jobs: [...(prev.jobs || []), job] }));
     setInvoice(job);
     setGenerating(false);
     setStep(3);
   }
+
   if (step === 3 && invoice) {
     return <Receipt job={invoice} onDone={onDone} />;
   }
