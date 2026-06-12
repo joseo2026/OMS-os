@@ -21,6 +21,14 @@
       @media print {
         body { background: #fff; }
         .no-print { display: none !important; }
+        body * { visibility: hidden; }
+        .print-area, .print-area * { visibility: visible; }
+        .print-area {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+        }
       }
       @keyframes slideUp {
         from { transform: translateY(100%); }
