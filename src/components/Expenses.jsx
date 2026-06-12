@@ -9,7 +9,7 @@ export default function Expenses({ data, setData, autoAdd, onAutoAddDone }) {
   const { C, S } = useTheme();
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState("All");
-  const [form, setForm] = useState({ date: today(), category: EXPENSE_CATS[0], description: "", amount: "", vendor: "", receipt: "" });
+  const [form, setForm] = useState({ date: today(), category: EXPENSE_CATS[0], description: "", amount: "", vendor: "" });
 
   useEffect(() => {
     if (autoAdd) {
@@ -20,10 +20,18 @@ export default function Expenses({ data, setData, autoAdd, onAutoAddDone }) {
 
   async function save() {
     if (!form.amount || !form.description) return;
-    const newExpense = { ...form, id: uid(), created_at: today() };
+    const newExpense = {
+      id:          uid(),
+      created_at:  today(),
+      date:        form.date,
+      category:    form.category,
+      description: form.description,
+      amount:      Number(form.amount),
+      vendor:      form.vendor || null,
+    };
     await saveData('expenses', newExpense);
     setData({ ...data, expenses: [...(data.expenses || []), newExpense] });
-    setForm({ date: today(), category: EXPENSE_CATS[0], description: "", amount: "", vendor: "", receipt: "" });
+    setForm({ date: today(), category: EXPENSE_CATS[0], description: "", amount: "", vendor: "" });
     setShowModal(false);
   }
 
