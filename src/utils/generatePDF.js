@@ -36,8 +36,13 @@ export function generateInvoicePDF(j) {
   const isLiftTruck = (j.jobType || j.job_type) === "lift_truck";
 
   // ── LOGO ──────────────────────────────────────────────
+// ── LOGO ──────────────────────────────────────────────
+  const logoW = 34;
+  let logoH = 34;
   try {
-    doc.addImage(LOGO_B64, "JPEG", mL, y, 34, 34);
+    const props = doc.getImageProperties(LOGO_B64);
+    logoH = logoW * (props.height / props.width);
+    doc.addImage(LOGO_B64, "JPEG", mL, y, logoW, logoH);
   } catch {}
 
   // ── BUSINESS INFO ─────────────────────────────────────
