@@ -68,7 +68,7 @@ function Receipt({ job, onDone }) {
           <tbody>
             {job.lines.map((l, i) => (
               <tr key={i} style={{ borderBottom: "1px solid #f0f0f0" }}>
-                <td style={{ fontSize: 12, padding: "7px 0" }}>{l.service}</td>
+                <td style={{ fontSize: 12, padding: "7px 0" }}>{l.customName || l.service}</td>
                 <td style={{ fontSize: 12, padding: "7px 0", textAlign: "right", color: "#555" }}>{fmt(l.labor)}</td>
                 <td style={{ fontSize: 12, padding: "7px 0", textAlign: "right", color: "#555" }}>{fmt(l.parts)}</td>
                 <td style={{ fontSize: 12, padding: "7px 0", textAlign: "right", fontWeight: 600 }}>{fmt(Number(l.labor) + Number(l.parts))}</td>
@@ -168,7 +168,7 @@ export default function NewJob({ data, setData, onDone }) {
     const updated = [...lines];
     if (field === "service") {
       const found = servicesList.find(s => s.name === value);
-      updated[i] = { service: value, labor: found ? found.labor : 0, parts: found ? found.parts : 0 };
+      updated[i] = { service: value, labor: found ? found.labor : 0, parts: found ? found.parts : 0, customName: value === "Custom Service" ? "" : undefined };
     } else {
       updated[i] = { ...updated[i], [field]: parseFloat(value) || 0 };
     }
@@ -185,7 +185,6 @@ export default function NewJob({ data, setData, onDone }) {
     let custObj = customers.find(c => c.id === selectedCustomer);
     let vehObj  = vehicles.find(v => v.id === selectedVehicle);
 
-    // Save new customer
     if (custMode === "new") {
       const nc = { ...newCust, id: uid(), created_at: today() };
       await saveData("customers", nc);
@@ -193,7 +192,6 @@ export default function NewJob({ data, setData, onDone }) {
       setData(prev => ({ ...prev, customers: [...(prev.customers || []), nc] }));
     }
 
-    // Save new vehicle/equipment — explicit fields, null for empty numerics
     if (vehMode === "new" || !vehObj) {
       const nv = isLiftTruck
         ? {
@@ -221,7 +219,6 @@ export default function NewJob({ data, setData, onDone }) {
       setData(prev => ({ ...prev, vehicles: [...(prev.vehicles || []), nv] }));
     }
 
-    // AI notes prompt
     const equipmentLine = isLiftTruck
       ? `Lift Truck: ${vehObj?.make} ${vehObj?.model}${vehObj?.serial ? ` S/N ${vehObj.serial}` : ""} at ${newEquip.hour_meter || vehObj?.hour_meter || "unknown"} hours`
       : `Vehicle: ${vehObj?.year} ${vehObj?.make} ${vehObj?.model} at ${mileage} miles`;
@@ -239,7 +236,7 @@ export default function NewJob({ data, setData, onDone }) {
           max_tokens: 1000,
           messages: [{
             role: "user",
-            content: `You are the service assistant for Ocasio Mechanical Services LLC, a professional mobile mechanical service in Florida. Write a 2-sentence professional service summary for this receipt. Warm, confident, honest tone. Include a next service reminder. No greeting, just the note.\n\nCustomer: ${custObj?.name}\n${equipmentLine}\nServices: ${lines.map(l => l.service).join(", ")}\nTech notes: ${techNotes || "none"}\nTotal: $${grandTotal.toFixed(2)}`
+            content: `You are the service assistant for Ocasio Mechanical Services LLC, a professional mobile mechanical service in Florida. Write a 2-sentence professional service summary for this receipt. Warm, confident, honest tone. Include a next service reminder. No greeting, just the note.\n\nCustomer: ${custObj?.name}\n${equipmentLine}\nServices: ${lines.map(l => l.customName || l.service).join(", ")}\nTech notes: ${techNotes || "none"}\nTotal: $${grandTotal.toFixed(2)}`
           }]
         })
       });
@@ -252,7 +249,6 @@ export default function NewJob({ data, setData, onDone }) {
     const jn = jobNum();
     const hmValue = isLiftTruck ? (newEquip.hour_meter || vehObj?.hour_meter || null) : null;
 
-    // Build job object — camelCase for app, snake_case for Supabase
     const job = {
       id: uid(),
       job_number: jn,
@@ -292,7 +288,6 @@ export default function NewJob({ data, setData, onDone }) {
       created_at: new Date().toISOString(),
     };
 
-    // Save job to Supabase — only columns that exist in the table, null for empty numerics
     await saveData("jobs", {
       id:               job.id,
       job_number:       job.job_number,
@@ -323,7 +318,6 @@ export default function NewJob({ data, setData, onDone }) {
       created_at:       job.created_at,
     });
 
-    // Travel mileage — from_loc/to_loc match SQL schema
     const rawTravel = travelMiles.replace(/,/g, "");
     if (rawTravel && Number(rawTravel) > 0) {
       const purposeEquip = isLiftTruck
@@ -499,9 +493,21 @@ export default function NewJob({ data, setData, onDone }) {
                     style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 18 }}>×</button>
                 )}
               </div>
-              <Input as="select" value={line.service} onChange={e => updateLine(i, "service", e.target.value)}>
+              <Input as="select" value={line.customName !== undefined ? "Custom Service" : line.service} onChange={e => updateLine(i, "service", e.target.value)}>
                 {servicesList.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
               </Input>
+              {line.service === "Custom Service" && (
+                <Input
+                  label="Service Description *"
+                  value={line.customName || ""}
+                  onChange={e => {
+                    const updated = [...lines];
+                    updated[i] = { ...updated[i], customName: e.target.value };
+                    setLines(updated);
+                  }}
+                  placeholder="Describe the service performed"
+                />
+              )}
               <div style={S.grid2}>
                 <Input label="Labor ($)" type="number" inputMode="decimal" value={line.labor} onChange={e => updateLine(i, "labor", e.target.value)} onFocus={e => e.target.select()} />
                 <Input label="Parts ($)" type="number" inputMode="decimal" value={line.parts} onChange={e => updateLine(i, "parts", e.target.value)} onFocus={e => e.target.select()} />
