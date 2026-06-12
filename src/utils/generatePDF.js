@@ -37,21 +37,21 @@ export function generateInvoicePDF(j) {
 
   // ── LOGO ──────────────────────────────────────────────
   try {
-    doc.addImage(LOGO_B64, "PNG", mL, y, 22, 22);
+    doc.addImage(LOGO_B64, "JPEG", mL, y, 34, 34);
   } catch {}
 
   // ── BUSINESS INFO ─────────────────────────────────────
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
   doc.setTextColor(...BLUE);
-  doc.text("OCASIO MECHANICAL SERVICES LLC", mL + 26, y + 6);
+  doc.text("OCASIO MECHANICAL SERVICES LLC", mL + 38, y + 6);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
   doc.setTextColor(...GRAY);
-  doc.text("Mobile Mechanical Service  ·  Florida", mL + 26, y + 11);
-  doc.text(BIZ.address + "  ·  " + BIZ.city, mL + 26, y + 15.5);
-  doc.text(BIZ.phone + "  ·  " + BIZ.email, mL + 26, y + 20);
+  doc.text("Mobile Mechanical Service  ·  Florida", mL + 38, y + 11);
+  doc.text(BIZ.address + "  ·  " + BIZ.city, mL + 38, y + 15.5);
+  doc.text(BIZ.phone + "  ·  " + BIZ.email, mL + 38, y + 20);
 
   // ── RECEIPT LABEL (top right) ─────────────────────────
   doc.setFont("helvetica", "normal");
@@ -69,7 +69,7 @@ export function generateInvoicePDF(j) {
   doc.setTextColor(...LGRAY);
   doc.text(j.date || "", W - mR, y + 16, { align: "right" });
 
-  y += 26;
+  y += 38;
 
   // ── DIVIDER ───────────────────────────────────────────
   doc.setDrawColor(...BLUE);
