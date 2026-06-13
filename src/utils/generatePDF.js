@@ -189,12 +189,12 @@ export function generateInvoicePDF(j) {
   if (techNotes) {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7);
-    doc.setTextColor(...BLACK);
+    doc.setTextColor(...LGRAY);
     doc.text("TECHNICIAN NOTES", mL, y);
     y += 4;
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8.5);
-    doc.setTextColor(...GRAY);
+    doc.setTextColor(...BLACK);
     const tnLines = doc.splitTextToSize(techNotes, cW);
     doc.text(tnLines, mL, y);
     y += tnLines.length * 4.5 + 5;
