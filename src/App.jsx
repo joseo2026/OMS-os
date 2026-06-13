@@ -167,24 +167,17 @@ function AppContent() {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* ── Header ── */}
+ {/* ── Header ── */}
       <div style={{ flexShrink: 0, zIndex: 100 }}>
         <div style={S.header} className="no-print">
-          <div>
-            <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 2 }}>
-              Ocasio Mechanical Services
-            </div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.5px" }}>
-              {TABS[tabIndex]}
-            </div>
+          <div style={{ fontSize: 11, color: C.textMuted, textAlign: "left", flex: 1 }}>
+            {(data.jobs || []).length} jobs · {(data.customers || []).length} customers
           </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 12, color: C.textSecondary }}>
-              {new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
-            </div>
-            <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
-              {(data.jobs || []).length} jobs · {(data.customers || []).length} customers
-            </div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.5px", textAlign: "center" }}>
+            {TABS[tabIndex]}
+          </div>
+          <div style={{ fontSize: 12, color: C.textSecondary, textAlign: "right", flex: 1 }}>
+            {new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
           </div>
         </div>
       </div>
