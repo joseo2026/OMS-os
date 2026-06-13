@@ -102,10 +102,7 @@ function Receipt({ job, onDone }) {
           <div style={{ fontSize: 12, color: "#636af7", marginTop: 6, fontWeight: 700 }}>Thank You For Your Business!</div>
         </div>
       </div>
-      <ShareButtons job={job} />
-      <button style={{ ...S.btnPrimary, width: "100%", marginTop: 10 }} className="no-print" onClick={() => window.print()}>
-        Print / Save PDF
-      </button>
+<ShareButtons job={job} />
     </div>
   );
 }
