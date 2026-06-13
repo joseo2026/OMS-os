@@ -161,6 +161,8 @@ export function generateInvoicePDF(j) {
   doc.line(mL, y, colEnd, y);
   y += 4.5;
 
+  coconst techNotes = get(j.techNotes, j.tech_notes);
+
   const lines = j.lines || [];
   for (const l of lines) {
     const lineTotal  = Number(l.labor || 0) + Number(l.parts || 0);
