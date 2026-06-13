@@ -266,13 +266,11 @@ export default function JobHistory({ data, setData }) {
                                     {(j.lines || []).map(l => l.customName || l.service).join(", ")}
                                   </div>
                                 </div>
-                                <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+                             <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
                                   <div style={{ fontSize: 14, color: C.green, fontWeight: 700 }}>
                                     {fmt(j.grandTotal || j.grand_total)}
                                   </div>
-                                  <div style={{ fontSize: 11, color: C.accent, cursor: "pointer" }} onClick={() => setSelected(j)}>
-                                    View →
-                                  </div>
+                                  {deletingId === j.id ? (
                                   {deletingId === j.id ? (
                                     <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                                       <span style={{ fontSize: 11, color: C.red }}>Delete?</span>
