@@ -36,7 +36,6 @@ export function generateInvoicePDF(j) {
   const isLiftTruck = (j.jobType || j.job_type) === "lift_truck";
 
   // ── LOGO ──────────────────────────────────────────────
-// ── LOGO ──────────────────────────────────────────────
   const logoW = 34;
   let logoH = 34;
   try {
@@ -97,7 +96,6 @@ export function generateInvoicePDF(j) {
   doc.setTextColor(...BLACK);
   doc.text(get(j.customerName, j.customer_name) || "—", mL, y);
 
-  // Vehicle or lift truck info
   if (isLiftTruck) {
     const ltLabel = (get(j.vehicleMake, j.vehicle_make) + " " + get(j.vehicleModel, j.vehicle_model)).trim() || "—";
     doc.text(ltLabel, col2X, y);
@@ -157,11 +155,8 @@ export function generateInvoicePDF(j) {
   doc.text("PARTS", colParX + cW * 0.17, y, { align: "right" });
   doc.text("TOTAL", colEnd,               y, { align: "right" });
   y += 3;
-
   doc.line(mL, y, colEnd, y);
   y += 4.5;
-
-  coconst techNotes = get(j.techNotes, j.tech_notes);
 
   const lines = j.lines || [];
   for (const l of lines) {
@@ -188,6 +183,22 @@ export function generateInvoicePDF(j) {
     y += 3;
   }
   y += 3;
+
+  // ── TECHNICIAN NOTES ──────────────────────────────────
+  const techNotes = get(j.techNotes, j.tech_notes);
+  if (techNotes) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.setTextColor(...LGRAY);
+    doc.text("TECHNICIAN NOTES", mL, y);
+    y += 4;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(...GRAY);
+    const tnLines = doc.splitTextToSize(techNotes, cW);
+    doc.text(tnLines, mL, y);
+    y += tnLines.length * 4.5 + 5;
+  }
 
   // ── TOTALS ────────────────────────────────────────────
   const totX = midX + 4;
@@ -223,36 +234,23 @@ export function generateInvoicePDF(j) {
   y += 8;
 
   // ── SERVICE NOTES ─────────────────────────────────────
-  const aiNotes   = get(j.aiNotes, j.ai_notes);
-  const techNotes = get(j.techNotes, j.tech_notes);
+  const aiNotes = get(j.aiNotes, j.ai_notes);
 
   if (aiNotes) {
     const noteLines = doc.splitTextToSize(aiNotes, cW - 8);
     const noteH     = noteLines.length * 4.5 + 6;
+
     doc.setFillColor(245, 247, 252);
     doc.roundedRect(mL, y, cW, noteH, 2, 2, "F");
     doc.setDrawColor(...BLUE);
     doc.setLineWidth(1.2);
     doc.line(mL, y + 2, mL, y + noteH - 2);
+
     doc.setFont("helvetica", "italic");
     doc.setFontSize(8.5);
     doc.setTextColor(...GRAY);
     doc.text(noteLines, mL + 5, y + 4.5);
     y += noteH + 5;
-  }
-
-  if (techNotes) {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(7);
-    doc.setTextColor(...LGRAY);
-    doc.text("TECHNICIAN NOTES", mL, y);
-    y += 4;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8.5);
-    doc.setTextColor(...GRAY);
-    const tnLines = doc.splitTextToSize(techNotes, cW);
-    doc.text(tnLines, mL, y);
-    y += tnLines.length * 4.5 + 5;
   }
 
   // ── FOOTER ────────────────────────────────────────────
@@ -280,3 +278,4 @@ export function generateInvoicePDF(j) {
 
   return doc.output("blob");
 }
+    
