@@ -189,7 +189,7 @@ export function generateInvoicePDF(j) {
   if (techNotes) {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7);
-    doc.setTextColor(...LGRAY);
+    doc.setTextColor(...BLACK);
     doc.text("TECHNICIAN NOTES", mL, y);
     y += 4;
     doc.setFont("helvetica", "normal");
