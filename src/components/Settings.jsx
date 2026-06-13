@@ -140,18 +140,12 @@ export default function Settings({ data }) {
               {isDark ? "Dark mode" : "Light mode"}
             </div>
           </div>
-          <button
+         <button
             onClick={toggleTheme}
             style={{
-              background:   C.elevated,
-              border:       `1px solid ${C.border}`,
-              borderRadius: 10,
+              ...S.btnPrimary,
               padding:      "9px 18px",
-              color:        C.textPrimary,
               fontSize:     13,
-              fontWeight:   600,
-              cursor:       "pointer",
-              fontFamily:   "inherit",
             }}
           >
             {isDark ? "Switch to Light" : "Switch to Dark"}
