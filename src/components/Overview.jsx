@@ -138,7 +138,7 @@ export default function Overview({ data, setData }) {
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
         <button
           onClick={() => setYear(y => y - 1)}
-          style={{ ...S.btnSecondary, padding: "8px 16px", fontSize: 16 }}
+          style={{ ...S.btnPrimary, padding: "8px 16px", fontSize: 16 }}
         >←</button>
         <div style={{ fontSize: 20, fontWeight: 700, flex: 1, textAlign: "center", letterSpacing: "-0.5px" }}>
           {year}
@@ -148,9 +148,9 @@ export default function Overview({ data, setData }) {
             </span>
           )}
         </div>
-        <button
+       <button
           onClick={() => setYear(y => y + 1)}
-          style={{ ...S.btnSecondary, padding: "8px 16px", fontSize: 16 }}
+          style={{ ...S.btnPrimary, padding: "8px 16px", fontSize: 16 }}
         >→</button>
       </div>
 
