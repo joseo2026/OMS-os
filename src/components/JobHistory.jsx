@@ -102,13 +102,7 @@ function JobReceipt({ j, onBack, onDelete }) {
         </div>
       </div>
 
-      <ShareButtons job={j} />
-      <button style={{ ...S.btnPrimary, width: "100%", marginTop: 10 }} className="no-print" onClick={() => window.print()}>
-        Print / Save PDF
-      </button>
-      <p style={{ fontSize: 11, textAlign: "center", marginTop: 8 }} className="no-print">
-        Mac: File → Print → PDF · iPhone: Share → Print → pinch to zoom
-      </p>
+<ShareButtons job={j} />
     </div>
   );
 }
