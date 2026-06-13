@@ -102,7 +102,7 @@ function JobReceipt({ j, onBack, onDelete }) {
         </div>
       </div>
 
-<ShareButtons job={j} />
+      <ShareButtons job={j} />
     </div>
   );
 }
@@ -112,16 +112,20 @@ export default function JobHistory({ data, setData }) {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [expandedCustomers, setExpandedCustomers] = useState(() => new Set());
+  const [expandedVehicles, setExpandedVehicles] = useState(() => new Set());
+
+  const get = (a, b) => a || b || "";
 
   const jobs = [...(data.jobs || [])].sort((a, b) => b.date?.localeCompare(a.date));
 
   const filtered = jobs.filter(j => {
     const q = search.toLowerCase();
     return (
-      (j.customerName || j.customer_name)?.toLowerCase().includes(q) ||
-      (j.jobNumber || j.job_number)?.toLowerCase().includes(q) ||
-      (j.vehicleMake || j.vehicle_make)?.toLowerCase().includes(q) ||
-      (j.vehicleModel || j.vehicle_model)?.toLowerCase().includes(q)
+      get(j.customerName, j.customer_name)?.toLowerCase().includes(q) ||
+      get(j.jobNumber, j.job_number)?.toLowerCase().includes(q) ||
+      get(j.vehicleMake, j.vehicle_make)?.toLowerCase().includes(q) ||
+      get(j.vehicleModel, j.vehicle_model)?.toLowerCase().includes(q)
     );
   });
 
@@ -143,6 +147,54 @@ export default function JobHistory({ data, setData }) {
     return <JobReceipt j={selected} onBack={() => setSelected(null)} onDelete={handleDelete} />;
   }
 
+  // Group filtered jobs into Customer → Vehicle → Jobs (most recently active first)
+  const groups = [];
+  const custIndex = new Map();
+  for (const j of filtered) {
+    const custKey = get(j.customerId, j.customer_id) || get(j.customerName, j.customer_name) || "unknown";
+    const custName = get(j.customerName, j.customer_name) || "Unknown Customer";
+    let cust = custIndex.get(custKey);
+    if (!cust) {
+      cust = { key: custKey, name: custName, jobCount: 0, total: 0, vehicles: [], vehicleIndex: new Map() };
+      custIndex.set(custKey, cust);
+      groups.push(cust);
+    }
+    cust.jobCount++;
+    cust.total += Number(j.grandTotal || j.grand_total || 0);
+
+    const isLiftTruck = (j.jobType || j.job_type) === "lift_truck";
+    const vehLabel = isLiftTruck
+      ? `${get(j.vehicleMake, j.vehicle_make)} ${get(j.vehicleModel, j.vehicle_model)}`.trim() || "Lift Truck"
+      : `${get(j.vehicleYear, j.vehicle_year)} ${get(j.vehicleMake, j.vehicle_make)} ${get(j.vehicleModel, j.vehicle_model)}`.trim() || "Vehicle";
+    const vehKey = get(j.vehicleId, j.vehicle_id) || vehLabel;
+
+    let veh = cust.vehicleIndex.get(vehKey);
+    if (!veh) {
+      veh = { key: vehKey, label: vehLabel, jobs: [], total: 0 };
+      cust.vehicleIndex.set(vehKey, veh);
+      cust.vehicles.push(veh);
+    }
+    veh.jobs.push(j);
+    veh.total += Number(j.grandTotal || j.grand_total || 0);
+  }
+
+  const searching = search.trim().length > 0;
+
+  function toggleCustomer(key) {
+    setExpandedCustomers(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }
+  function toggleVehicle(key) {
+    setExpandedVehicles(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }
+
   return (
     <div>
       <input
@@ -151,48 +203,96 @@ export default function JobHistory({ data, setData }) {
         value={search}
         onChange={e => setSearch(e.target.value)}
       />
-      <div style={{ fontSize: 12, color: C.textSecondary, marginBottom: 12 }}>{filtered.length} jobs</div>
+      <div style={{ fontSize: 12, color: C.textSecondary, marginBottom: 12 }}>
+        {filtered.length} job{filtered.length !== 1 ? "s" : ""} · {groups.length} customer{groups.length !== 1 ? "s" : ""}
+      </div>
 
-      {filtered.map(j => {
-        const get = (a, b) => a || b || "";
+      {groups.map(cust => {
+        const custOpen = searching || expandedCustomers.has(cust.key);
         return (
-          <div key={j.id} style={S.card}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-              <div style={{ cursor: "pointer", flex: 1 }} onClick={() => setSelected(j)}>
-                <div style={{ fontSize: 11, color: C.accent, fontWeight: 600, marginBottom: 2 }}>
-                  {get(j.jobNumber, j.job_number)}
-                </div>
-                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>
-                  {get(j.customerName, j.customer_name)}
-                </div>
-                <div style={{ fontSize: 12, color: C.textSecondary }}>
-                  {get(j.vehicleYear, j.vehicle_year)} {get(j.vehicleMake, j.vehicle_make)} {get(j.vehicleModel, j.vehicle_model)} · {j.mileage} mi
-                </div>
-                <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>
-                  {j.date} · {get(j.payMethod, j.pay_method)}
-                </div>
-                <div style={{ fontSize: 11, color: C.textMuted }}>
-                  {(j.lines || []).map(l => l.service).join(", ")}
-                </div>
-              </div>
-              <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
-                <div style={{ fontSize: 15, color: C.green, fontWeight: 700 }}>
-                  {fmt(j.grandTotal || j.grand_total)}
-                </div>
-                <div style={{ fontSize: 11, color: C.accent, cursor: "pointer" }} onClick={() => setSelected(j)}>
-                  View →
-                </div>
-                {deletingId === j.id ? (
-                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    <span style={{ fontSize: 11, color: C.red }}>Delete?</span>
-                    <button style={{ ...S.btnDanger, padding: "3px 10px", fontSize: 11 }} onClick={() => handleDelete(j)}>Yes</button>
-                    <button style={{ ...S.btnSecondary, padding: "3px 10px", fontSize: 11 }} onClick={() => setDeletingId(null)}>No</button>
+          <div key={cust.key} style={{ ...S.card, padding: 0, overflow: "hidden", marginBottom: 10 }}>
+            <div
+              onClick={() => toggleCustomer(cust.key)}
+              style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", cursor: "pointer" }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 11, color: C.textMuted, width: 12, display: "inline-block" }}>{custOpen ? "▾" : "▸"}</span>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700 }}>{cust.name}</div>
+                  <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+                    {cust.vehicles.length} vehicle{cust.vehicles.length !== 1 ? "s" : ""} · {cust.jobCount} job{cust.jobCount !== 1 ? "s" : ""}
                   </div>
-                ) : (
-                  <button style={{ ...S.btnDanger, padding: "3px 10px", fontSize: 11 }} onClick={() => setDeletingId(j.id)}>Delete</button>
-                )}
+                </div>
               </div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: C.green }}>{fmt(cust.total)}</div>
             </div>
+
+            {custOpen && (
+              <div style={{ borderTop: `1px solid ${C.border}` }}>
+                {cust.vehicles.map(veh => {
+                  const vehKey = `${cust.key}::${veh.key}`;
+                  const vehOpen = searching || expandedVehicles.has(vehKey);
+                  return (
+                    <div key={vehKey} style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <div
+                        onClick={() => toggleVehicle(vehKey)}
+                        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 16px 10px 34px", cursor: "pointer", background: C.elevated }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <span style={{ fontSize: 10, color: C.textMuted, width: 12, display: "inline-block" }}>{vehOpen ? "▾" : "▸"}</span>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 600 }}>{veh.label}</div>
+                            <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+                              {veh.jobs.length} job{veh.jobs.length !== 1 ? "s" : ""}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: C.textSecondary }}>{fmt(veh.total)}</div>
+                      </div>
+
+                      {vehOpen && (
+                        <div style={{ padding: "10px 12px 10px 34px" }}>
+                          {veh.jobs.map(j => (
+                            <div key={j.id} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 12px", marginBottom: 8 }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                                <div style={{ cursor: "pointer", flex: 1 }} onClick={() => setSelected(j)}>
+                                  <div style={{ fontSize: 11, color: C.accent, fontWeight: 600, marginBottom: 2 }}>
+                                    {get(j.jobNumber, j.job_number)}
+                                  </div>
+                                  <div style={{ fontSize: 12, color: C.textMuted }}>
+                                    {j.date} · {get(j.payMethod, j.pay_method)}{j.mileage ? ` · ${j.mileage} mi` : ""}
+                                  </div>
+                                  <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+                                    {(j.lines || []).map(l => l.customName || l.service).join(", ")}
+                                  </div>
+                                </div>
+                                <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+                                  <div style={{ fontSize: 14, color: C.green, fontWeight: 700 }}>
+                                    {fmt(j.grandTotal || j.grand_total)}
+                                  </div>
+                                  <div style={{ fontSize: 11, color: C.accent, cursor: "pointer" }} onClick={() => setSelected(j)}>
+                                    View →
+                                  </div>
+                                  {deletingId === j.id ? (
+                                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                                      <span style={{ fontSize: 11, color: C.red }}>Delete?</span>
+                                      <button style={{ ...S.btnDanger, padding: "3px 10px", fontSize: 11 }} onClick={() => handleDelete(j)}>Yes</button>
+                                      <button style={{ ...S.btnSecondary, padding: "3px 10px", fontSize: 11 }} onClick={() => setDeletingId(null)}>No</button>
+                                    </div>
+                                  ) : (
+                                    <button style={{ ...S.btnDanger, padding: "3px 10px", fontSize: 11 }} onClick={() => setDeletingId(j.id)}>Delete</button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         );
       })}
