@@ -271,7 +271,6 @@ export default function JobHistory({ data, setData }) {
                                     {fmt(j.grandTotal || j.grand_total)}
                                   </div>
                                   {deletingId === j.id ? (
-                                  {deletingId === j.id ? (
                                     <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                                       <span style={{ fontSize: 11, color: C.red }}>Delete?</span>
                                       <button style={{ ...S.btnDanger, padding: "3px 10px", fontSize: 11 }} onClick={() => handleDelete(j)}>Yes</button>
