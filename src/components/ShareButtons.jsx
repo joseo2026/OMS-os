@@ -2,8 +2,13 @@ import { useState } from "react";
 import { useTheme } from "../theme.jsx";
 import { generateInvoicePDF } from "../utils/generatePDF.js";
 
+// Tolerates both camelCase (local jobs) and snake_case (Supabase jobs)
+function get(a, b) {
+  return a || b || "";
+}
+
 function getPDFFilename(job) {
-  return `Ocasio-Receipt-${job.jobNumber || "invoice"}.pdf`;
+  return `Ocasio-Receipt-${get(job.jobNumber, job.job_number) || "invoice"}.pdf`;
 }
 
 async function buildPDFFile(job) {
@@ -22,66 +27,55 @@ function downloadBlob(blob, filename) {
 
 export default function ShareButtons({ job }) {
   const { C } = useTheme();
-  const [emailLoading, setEmailLoading] = useState(false);
-  const [smsLoading, setSmsLoading] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
   const [status, setStatus] = useState(null);
 
-  const firstName = job.customerName?.split(" ")[0] || "there";
-  const shareTitle = `Receipt ${job.jobNumber} — Ocasio Mechanical Services`;
-  const shareText = `Hi ${firstName}, here is your receipt from Ocasio Mechanical Services for your ${job.vehicleYear} ${job.vehicleMake} ${job.vehicleModel}. Total: $${Number(job.grandTotal || 0).toFixed(2)} (${job.payMethod}). Thank you for your business!`;
+  const customerName = get(job.customerName, job.customer_name);
+  const firstName = customerName?.split(" ")[0] || "there";
+  const jobNumber = get(job.jobNumber, job.job_number);
+  const vehicleLabel = [
+    get(job.vehicleYear, job.vehicle_year),
+    get(job.vehicleMake, job.vehicle_make),
+    get(job.vehicleModel, job.vehicle_model),
+  ].filter(Boolean).join(" ");
+  const grandTotal = get(job.grandTotal, job.grand_total);
+  const payMethod = get(job.payMethod, job.pay_method);
+
+  const shareTitle = `Receipt ${jobNumber} — Ocasio Mechanical Services`;
+  const shareText = `Hi ${firstName}, here is your receipt from Ocasio Mechanical Services${vehicleLabel ? ` for your ${vehicleLabel}` : ""}. Total: $${Number(grandTotal || 0).toFixed(2)} (${payMethod}). Thank you for your business!`;
 
   function flash(msg, ok = true) {
     setStatus({ msg, ok });
     setTimeout(() => setStatus(null), 4000);
   }
 
-  async function handleEmail() {
-    setEmailLoading(true);
+  async function handleShare() {
+    setShareLoading(true);
     try {
       const file = await buildPDFFile(job);
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file], title: shareTitle, text: shareText });
-        flash("Share sheet opened — pick Mail to send the PDF.");
+        flash("Share sheet opened — pick Mail, Messages, or any app.");
+      } else if (navigator.share) {
+        downloadBlob(file, getPDFFilename(job));
+        await navigator.share({ title: shareTitle, text: shareText });
+        flash("PDF downloaded — attach it in the share sheet that opened.", true);
       } else {
         downloadBlob(file, getPDFFilename(job));
-        const subject = encodeURIComponent(`Your Receipt — Ocasio Mechanical Services (${job.jobNumber})`);
-        const body = encodeURIComponent(`Hi ${firstName},\n\nPlease find your invoice PDF attached.\n\n${shareText}\n\n— Ocasio Mechanical Services LLC`);
-        const email = job.customerEmail ? encodeURIComponent(job.customerEmail) : "";
-        window.open(`mailto:${email}?subject=${subject}&body=${body}`, "_self");
-        flash("PDF downloaded — attach it to the email that just opened.", true);
+        if (navigator.clipboard) {
+          await navigator.clipboard.writeText(shareText);
+          flash("PDF downloaded and message copied — paste it into Mail or Messages.", true);
+        } else {
+          flash("PDF downloaded.", true);
+        }
       }
     } catch (err) {
       if (err.name !== "AbortError") {
-        flash("Could not share. PDF downloaded instead.", false);
+        flash("Could not open share sheet. PDF downloaded instead.", false);
         try { const blob = generateInvoicePDF(job); downloadBlob(blob, getPDFFilename(job)); } catch {}
       }
     } finally {
-      setEmailLoading(false);
-    }
-  }
-
-  async function handleSMS() {
-    setSmsLoading(true);
-    try {
-      const file = await buildPDFFile(job);
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: shareTitle, text: shareText });
-        flash("Share sheet opened — pick Messages to send the PDF.");
-      } else {
-        downloadBlob(file, getPDFFilename(job));
-        const phone = (job.customerPhone || "").replace(/\D/g, "");
-        const body = encodeURIComponent(shareText + " (PDF invoice downloaded to your device)");
-        const sep = /iPhone|iPad|Mac/.test(navigator.userAgent) ? "&" : "?";
-        window.open(`sms:${phone}${sep}body=${body}`, "_self");
-        flash("PDF downloaded — attach it to the message that just opened.", true);
-      }
-    } catch (err) {
-      if (err.name !== "AbortError") {
-        flash("Could not share. PDF downloaded instead.", false);
-        try { const blob = generateInvoicePDF(job); downloadBlob(blob, getPDFFilename(job)); } catch {}
-      }
-    } finally {
-      setSmsLoading(false);
+      setShareLoading(false);
     }
   }
 
@@ -120,14 +114,11 @@ export default function ShareButtons({ job }) {
       </div>
 
       <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={handleEmail} disabled={emailLoading} style={{ ...btn, opacity: emailLoading ? 0.5 : 1 }}>
-          ✉ {emailLoading ? "Generating…" : "Email"}
-        </button>
-        <button onClick={handleSMS} disabled={smsLoading} style={{ ...btn, opacity: smsLoading ? 0.5 : 1 }}>
-          💬 {smsLoading ? "Generating…" : "Text"}
+        <button onClick={handleShare} disabled={shareLoading} style={{ ...btn, opacity: shareLoading ? 0.5 : 1 }}>
+          ↑ {shareLoading ? "Preparing…" : "Share"}
         </button>
         <button onClick={handleDownload} style={{ ...btn }}>
-          ↓ PDF
+          ↓ Save PDF
         </button>
       </div>
 
