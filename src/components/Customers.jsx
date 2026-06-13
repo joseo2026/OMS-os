@@ -3,6 +3,7 @@ import { useTheme } from "../theme.jsx";
 import { uid, today, fmt, saveData, deleteData } from "../helpers.js";
 import Input from "./Input.jsx";
 import Modal from "./Modal.jsx";
+import ShareButtons from "./ShareButtons.jsx";
 
 const EMPTY_CUSTOMER = { name: "", phone: "", email: "", address: "", city: "", zip: "" };
 const EMPTY_VEHICLE = { year: "", make: "", model: "", vin: "", color: "", notes: "" };
@@ -79,9 +80,7 @@ function InvoiceModal({ job, onClose }) {
           <div style={{ fontSize: 11, color: "#3b82f6", marginTop: 4, fontWeight: 700 }}>Thank You For Your Business!</div>
         </div>
       </div>
-      <button onClick={() => window.print()} style={{ ...S.btnPrimary, width: "100%", marginTop: 12 }}>
-        Print / Save PDF
-      </button>
+   <ShareButtons job={job} />
     </Modal>
   );
 }
